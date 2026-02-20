@@ -1,0 +1,46 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-slate-200 p-4">
+    <div class="w-full max-w-lg bg-white shadow-2xl overflow-hidden">
+        
+        <!-- Header Industrial -->
+        <div class="bg-slate-900 p-10 text-center border-b-4 border-indigo-600">
+            <span class="block text-xs font-bold text-indigo-400 uppercase tracking-[0.2em] mb-2">Reserva Profesional</span>
+            <h1 class="text-3xl font-bold text-white tracking-tight">{{ professional.name }}</h1>
+            <p class="text-slate-400 text-sm mt-2">Sistema de Turnos</p>
+        </div>
+
+        <!-- Formulario Limpio -->
+        <div class="p-8 space-y-6 bg-white">
+            
+            <form action="{{ url_for('public.agenda', slug=professional.slug) }}" method="POST" class="space-y-5">
+                
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Nombre Completo</label>
+                    <input type="text" name="name" required placeholder="Juan Pérez" class="block w-full px-0 py-3 text-slate-900 bg-transparent border-0 border-b-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-lg transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Teléfono</label>
+                    <input type="tel" name="phone" required placeholder="+54 11 1234-5678" class="block w-full px-0 py-3 text-slate-900 bg-transparent border-0 border-b-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-lg transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 pt-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Día</label>
+                        <input type="date" name="date" required class="block w-full px-0 py-3 text-slate-900 bg-transparent border-0 border-b-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-lg transition cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Hora</label>
+                        <input type="time" name="time" required class="block w-full px-0 py-3 text-slate-900 bg-transparent border-0 border-b-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-lg transition cursor-pointer">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 text-white py-4 rounded text-sm font-bold uppercase tracking-widest hover:bg-indigo-700 transition mt-8 shadow-lg shadow-indigo-600/20">
+                    Confirmar Turno
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

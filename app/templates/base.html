@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgendaPro | Sistema de Gestión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .font-mono { font-family: 'SF Mono', 'Roboto Mono', monospace; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col">
+
+    <nav class="bg-slate-900 border-b border-slate-800 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-white text-xl font-bold tracking-tight">AGENDA<span class="text-indigo-400">PRO</span></span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if current_user.is_authenticated %}
+                        <span class="text-slate-400 text-sm hidden sm:inline">{{ current_user.name }}</span>
+                        <a href="{{ url_for('auth.logout') }}" class="text-slate-300 hover:text-white border border-slate-700 px-3 py-1.5 rounded text-sm transition">Cerrar Sesión</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-indigo-700 transition">Ingresar</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="max-w-7xl mx-auto mt-4 px-4 sm:px-6 lg:px-8">
+                    {% for message in messages %}
+                        <div class="bg-slate-800 text-white p-3 rounded border-l-4 border-indigo-500 shadow-sm text-sm" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-slate-900 text-center py-4 text-slate-500 text-xs border-t border-slate-800">
+        &copy; {{ now.year }} AgendaPro. Sistema Profesional.
+    </footer>
+
+</body>
+</html>
