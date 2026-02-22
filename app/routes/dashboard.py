@@ -30,19 +30,24 @@ def index():
         Appointment.date > today
     ).order_by(Appointment.date, Appointment.time).limit(4).all()
     
-    # Días disponibles (para marcar en el calendario)
+    # Días disponibles
     enabled_days = AvailableDay.query.filter_by(
         professional_id=current_user.id
     ).filter(AvailableDay.date >= today).all()
     
     enabled_dates = [d.date for d in enabled_days]
     
-    # Generar calendario del mes actual y siguiente
-    cal = calendar.Calendar(firstweekday=6) # Domingo primero
+    # Calendarios
+    cal = calendar.Calendar(firstweekday=6) 
     current_month_days = cal.monthdatescalendar(today.year, today.month)
+    
     next_month = today.month + 1 if today.month < 12 else 1
     next_year = today.year if today.month < 12 else today.year + 1
     next_month_days = cal.monthdatescalendar(next_year, next_month)
+    
+    # Calculamos el nombre del mes siguiente AQUI (solución)
+    next_month_date = today.replace(day=28) + timedelta(days=10)
+    next_month_name = next_month_date.strftime('%B %Y')
     
     return render_template('dashboard/index.html', 
                            todays_appointments=todays_appointments,
@@ -50,9 +55,9 @@ def index():
                            enabled_dates=enabled_dates,
                            current_month_days=current_month_days,
                            next_month_days=next_month_days,
+                           next_month_name=next_month_name,
                            today=today)
 
-# NUEVO: Endpoint para toggle rápido de días
 @dashboard.route('/toggle-day/<date_str>', methods=['POST'])
 @login_required
 def toggle_day(date_str):
@@ -61,12 +66,9 @@ def toggle_day(date_str):
         existing = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_obj).first()
         
         if existing:
-            # Si existe, lo borramos (Deshabilitar)
             db.session.delete(existing)
             action = 'removed'
         else:
-            # Si no existe, lo creamos con horario default (Habilitar)
-            # Horario default: 09:00 a 18:00
             new_day = AvailableDay(
                 professional_id=current_user.id, 
                 date=date_obj,
@@ -82,7 +84,6 @@ def toggle_day(date_str):
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Endpoint para obtener datos en vivo (Auto-refresh)
 @dashboard.route('/live-data')
 @login_required
 def live_data():
@@ -110,7 +111,6 @@ def live_data():
         } for a in upcoming]
     })
 
-# Rutas estándar
 @dashboard.route('/set-hours/<int:day_id>', methods=['POST'])
 @login_required
 def set_hours(day_id):

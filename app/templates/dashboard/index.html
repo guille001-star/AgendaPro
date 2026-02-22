@@ -50,7 +50,6 @@
                 </div>
 
                 <!-- MES SIGUIENTE -->
-                {% set next_month_name = (today.replace(day=28) + timedelta(days=10)).strftime('%B %Y') %}
                 <h3 class="text-center font-bold text-slate-700 mb-2 mt-8 uppercase tracking-wider">{{ next_month_name }}</h3>
                  <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
@@ -160,12 +159,8 @@
         fetch('/dashboard/live-data')
             .then(response => response.json())
             .then(data => {
-                // Actualizar contador
                 document.getElementById('today-badge').innerText = data.todays.length;
-                
-                // Actualizar lista HOY
                 const listToday = document.getElementById('list-today');
-                const emptyToday = document.getElementById('empty-today');
                 
                 if(data.todays.length > 0){
                     listToday.innerHTML = data.todays.map(apt => `
@@ -178,7 +173,6 @@
                     listToday.innerHTML = '<li class="text-slate-400 text-center py-4">Sin turnos hoy.</li>';
                 }
 
-                // Actualizar lista PROXIMOS
                 const listUpcoming = document.getElementById('list-upcoming');
                  if(data.upcoming.length > 0){
                     listUpcoming.innerHTML = data.upcoming.map(apt => `
