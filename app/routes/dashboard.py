@@ -19,10 +19,6 @@ def get_local_date():
 def index():
     today = get_local_date()
     
-    # DEBUG: Contadores absolutos
-    total_en_db = Appointment.query.filter_by(professional_id=current_user.id).count()
-    ultimos_5 = Appointment.query.filter_by(professional_id=current_user.id).order_by(Appointment.created_at.desc()).limit(5).all()
-    
     todays_appointments = Appointment.query.filter_by(
         professional_id=current_user.id, 
         date=today, 
@@ -58,11 +54,7 @@ def index():
                            current_month_days=current_month_days,
                            next_month_days=next_month_days,
                            next_month_name=next_month_name,
-                           today=today,
-                           # Variables Debug
-                           debug_total=total_en_db,
-                           debug_ultimos=ultimos_5,
-                           debug_user_id=current_user.id)
+                           today=today)
 
 @dashboard.route('/toggle-day/<date_str>', methods=['POST'])
 @login_required
