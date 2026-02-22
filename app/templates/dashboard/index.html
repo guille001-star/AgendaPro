@@ -10,7 +10,7 @@
                     <h1 class="text-2xl font-bold text-white">{{ current_user.name }}</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <a href="{{ url_for('auth.change_password') }}" class="text-sm text-slate-300 hover:text-white transition">Contraseña</a>
+                    <!-- Eliminado link problematico de contraseña -->
                     <a href="{{ url_for('auth.logout') }}" class="bg-red-600 text-white text-sm font-bold py-2 px-4 rounded hover:bg-red-700 transition">Salir</a>
                 </div>
             </div>
@@ -19,11 +19,11 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Tabs de Navegación -->
-        <div class="flex border-b border-slate-200 mb-8">
-            <button onclick="switchTab('hoy')" id="btn-hoy" class="tab-btn px-6 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600">Turnos de Hoy</button>
-            <button onclick="switchTab('proxi')" id="btn-proxi" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Próximos</button>
-            <button onclick="switchTab('calen')" id="btn-calen" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Calendario</button>
-            <button onclick="switchTab('link')" id="btn-link" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Mi Link</button>
+        <div class="flex border-b border-slate-200 mb-8 overflow-x-auto">
+            <button onclick="switchTab('hoy')" id="btn-hoy" class="tab-btn px-6 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 whitespace-nowrap">Turnos de Hoy</button>
+            <button onclick="switchTab('proxi')" id="btn-proxi" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Próximos</button>
+            <button onclick="switchTab('calen')" id="btn-calen" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Calendario</button>
+            <button onclick="switchTab('link')" id="btn-link" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Mi Link</button>
         </div>
 
         <!-- TAB 1: Turnos de Hoy -->
@@ -95,7 +95,7 @@
              <!-- Habilitar Días -->
             <div class="bg-white p-6 rounded-lg shadow mb-8">
                 <h3 class="text-lg font-bold mb-4 text-slate-800">1. Habilitar Día</h3>
-                <form action="{{ url_for('dashboard.add_available_day') }}" method="POST" class="flex gap-4 items-end">
+                <form action="{{ url_for('dashboard.add_available_day') }}" method="POST" class="flex gap-4 items-end flex-wrap">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-1">FECHA</label>
                         <input type="date" name="date" required class="border border-slate-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
@@ -122,7 +122,7 @@
                                 <span class="ml-2 text-orange-500 font-semibold text-sm">(Horario sin definir)</span>
                             {% endif %}
                         </div>
-                        <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-4 flex-wrap">
                             <form action="{{ url_for('dashboard.set_hours', day_id=day.id) }}" method="POST" class="flex items-center gap-2">
                                 <input type="time" name="start_time" value="{{ day.start_time.strftime('%H:%M') if day.start_time else '09:00' }}" class="border rounded px-2 py-1 text-sm">
                                 <input type="time" name="end_time" value="{{ day.end_time.strftime('%H:%M') if day.end_time else '18:00' }}" class="border rounded px-2 py-1 text-sm">
