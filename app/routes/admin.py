@@ -1,54 +1,51 @@
-﻿from flask import Blueprint, render_template, redirect, url_for, flash
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
-from werkzeug.security import generate_password_hash
-from sqlalchemy import func
 
 admin = Blueprint('admin', __name__)
 
-def admin_required(f):
-    def decorated_function(*args, **kwargs):
-        # Verificación simple: Si NO es el ID 1 y NO es tu email, rechazar
-        if not current_user.is_authenticated:
-            return redirect(url_for('auth.login'))
-            
-        if current_user.id != 1 and current_user.email != 'geopat001@gmail.com':
-            flash('Acceso denegado. Debes ser administrador.')
-            return redirect(url_for('dashboard.index'))
-            
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
-
 @admin.route('/super-admin')
 @login_required
-@admin_required
-def panel():
-    total_users = User.query.count()
-    total_appointments = Appointment.query.count()
-    total_days_configured = AvailableDay.query.count()
-    all_users = User.query.order_by(User.id.desc()).all()
+def index():
+    # Solo el usuario ID 1 (el primero en registrarse) es admin
+    if current_user.id != 1:
+        return "Acceso denegado", 403
     
-    top_users = db.session.query(
-        User.name, func.count(Appointment.id).label('count')
-    ).join(Appointment).group_by(User.id).order_by(func.count(Appointment.id).desc()).limit(5).all()
-
-    return render_template('admin/panel.html', 
-                           total_users=total_users,
-                           total_appointments=total_appointments,
-                           total_days_configured=total_days_configured,
-                           all_users=all_users,
-                           top_users=top_users)
+    users = User.query.filter(User.id != current_user.id).all()
+    return render_template('admin/index.html', users=users)
 
 @admin.route('/super-admin/reset-password/<int:user_id>', methods=['POST'])
 @login_required
-@admin_required
 def reset_password(user_id):
+    if current_user.id != 1:
+        return "Acceso denegado", 403
+    
     user = User.query.get_or_404(user_id)
-    user.set_password('123456')
+    user.set_password('123456') # Password temporal
     db.session.commit()
-    flash(f'Contraseña de {user.name} reseteada a: 123456')
-    return redirect(url_for('admin.panel'))
+    flash(f'Password de {user.name} reseteado a 123456')
+    return redirect(url_for('admin.index'))
+
+# RUTA DE LIMPIEZA (USAR Y LUEGO ELIMINAR O COMENTAR)
+@admin.route('/limpiar-base-datos')
+@login_required
+def clean_db():
+    if current_user.id != 1:
+        return "Acceso denegado", 403
+    
+    try:
+        # Borrar turnos
+        Appointment.query.delete()
+        # Borrar días disponibles
+        AvailableDay.query.delete()
+        # Borrar usuarios (menos el admin actual)
+        User.query.filter(User.id != current_user.id).delete()
+        
+        db.session.commit()
+        return "<h1>Limpieza exitosa!</h1><p>Todos los datos de prueba han sido borrados.<br><a href='/dashboard'>Volver al Dashboard</a></p>"
+    except Exception as e:
+        db.session.rollback()
+        return f"Error: {e}"
