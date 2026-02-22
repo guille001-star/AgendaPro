@@ -31,13 +31,12 @@
                     <input type="hidden" name="time_slot" id="time-slot-input">
                 </div>
                 
-                <!-- NUEVO: Notas -->
                 <div id="notes-container" class="hidden">
                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wide">Nota (Opcional)</label>
-                    <textarea name="notes" rows="2" placeholder="Ej: Primera consulta, traer estudios..." class="w-full border border-slate-200 rounded p-2 text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
+                    <textarea name="notes" rows="2" class="w-full border border-slate-200 rounded p-2 text-sm focus:ring-1 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
                 </div>
 
-                <button type="submit" id="submit-btn" class="w-full bg-indigo-600 text-white py-4 rounded text-sm font-bold uppercase tracking-widest hover:bg-indigo-700 transition mt-4 shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <button type="submit" id="submit-btn" class="w-full bg-indigo-600 text-white py-4 rounded text-sm font-bold uppercase tracking-widest hover:bg-indigo-700 transition mt-4 shadow-lg disabled:opacity-50" disabled>
                     Confirmar Reserva
                 </button>
             </form>
@@ -53,15 +52,15 @@ document.getElementById('date-select').addEventListener('change', function() {
     const grid = document.getElementById('slots-grid');
     const submitBtn = document.getElementById('submit-btn');
     
-    grid.innerHTML = '';
+    grid.innerHTML = '<p class="col-span-3 text-center text-slate-400 text-sm">Consultando servidor...</p>';
     container.classList.remove('hidden');
     notesContainer.classList.add('hidden');
     submitBtn.disabled = true;
-    document.getElementById('time-slot-input').value = "";
 
     fetch(`/agenda/get-slots/${slug}/${date}`)
         .then(response => response.json())
         .then(data => {
+            grid.innerHTML = '';
             if(data.slots && data.slots.length > 0){
                 data.slots.forEach(slot => {
                     const btn = document.createElement('button');
@@ -73,13 +72,30 @@ document.getElementById('date-select').addEventListener('change', function() {
                         this.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
                         document.getElementById('time-slot-input').value = slot;
                         submitBtn.disabled = false;
-                        notesContainer.classList.remove('hidden'); // Mostrar notas al elegir hora
+                        notesContainer.classList.remove('hidden');
                     };
                     grid.appendChild(btn);
                 });
             } else {
-                grid.innerHTML = '<p class="col-span-3 text-center text-red-500 text-sm">Sin horarios disponibles.</p>';
+                // Mostramos el mensaje y el debug si existe
+                let msg = data.message || 'Sin horarios.';
+                let debugHtml = '';
+                if(data.debug) {
+                    debugHtml = `<div class="col-span-3 text-left text-xs text-gray-500 bg-gray-100 p-2 rounded mt-2 font-mono border border-dashed">
+                        <b>Debug Info:</b><br>
+                        Status: ${data.status}<br>
+                        Start: ${data.debug.start_time || 'N/A'}<br>
+                        End: ${data.debug.end_time || 'N/A'}<br>
+                        Duration: ${data.debug.duration_min} min<br>
+                        Booked: ${data.debug.booked_count}<br>
+                        Server Time (UTC): ${data.debug.now_utc}
+                    </div>`;
+                }
+                grid.innerHTML = `<div class="col-span-3"><p class="text-center text-red-500 text-sm">${msg}</p>${debugHtml}</div>`;
             }
+        })
+        .catch(err => {
+            grid.innerHTML = '<p class="col-span-3 text-center text-red-500 text-sm">Error de conexión.</p>';
         });
 });
 </script>
