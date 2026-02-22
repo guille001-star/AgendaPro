@@ -1,22 +1,13 @@
 ﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import current_user
-from flask_mail import Message
-from app import db, mail
+from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import datetime, timedelta, date
-from threading import Thread
+from urllib.parse import quote
 
 public = Blueprint('public', __name__)
-
-# Función auxiliar para enviar email en un hilo separado
-def send_async_email(app, msg):
-    with app.app_context():
-        try:
-            mail.send(msg)
-        except Exception as e:
-            print(f"Error enviando email en background: {e}")
 
 @public.route('/')
 def index():
@@ -91,36 +82,18 @@ def agenda(slug):
             db.session.add(new_appointment)
             db.session.commit()
             
-            # --- ENVÍO DE EMAIL EN BACKGROUND ---
-            if client_email and current_app.config.get('MAIL_USERNAME'):
-                msg = Message(
-                    subject=f"Confirmación de Turno con {professional.name}",
-                    sender=current_app.config['MAIL_USERNAME'],
-                    recipients=[client_email]
-                )
-                msg.body = f"""Hola {client_name}!
-
-Tu turno ha sido reservado con éxito.
-
-Detalles:
-Profesional: {professional.name}
-Fecha: {date_obj.strftime('%d/%m/%Y')}
-Hora: {time_obj.strftime('%H:%M')}
-
-Gracias por usar AgendaPro.
-"""
-                # Enviar en un hilo separado para no bloquear al usuario
-                thr = Thread(target=send_async_email, args=[current_app._get_current_object(), msg])
-                thr.start()
-            
-            flash('¡Turno reservado con éxito! Revisa tu correo.')
+            # REDIRIGIR A PANTALLA DE CONFIRMACIÓN
+            return render_template('public/confirmacion.html', 
+                                   professional=professional, 
+                                   date=date_obj, 
+                                   time=time_obj,
+                                   client_name=client_name)
                 
         except Exception as e:
             db.session.rollback()
             print(f"Error reservando: {e}")
             flash('Error al reservar.')
-            
-        return redirect(url_for('public.agenda', slug=slug))
+            return redirect(url_for('public.agenda', slug=slug))
         
     today = date.today()
     enabled_dates = AvailableDay.query.filter_by(professional_id=professional.id)\
