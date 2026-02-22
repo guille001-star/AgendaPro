@@ -14,8 +14,8 @@ def index():
         return redirect(url_for('dashboard.index'))
     return redirect(url_for('auth.login'))
 
-# Endpoint para obtener horarios via AJAX
-@public.route('/get_slots/<slug>/<date_str>')
+# CORRECCIÓN: Ruta coincide con el fetch JS (/agenda/get-slots/...)
+@public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first_or_404()
     selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -77,6 +77,7 @@ def agenda(slug):
             db.session.commit()
             flash('¡Turno reservado con éxito!')
         except Exception as e:
+            print(f"Error: {e}")
             flash('Error al reservar.')
             
         return redirect(url_for('public.agenda', slug=slug))
