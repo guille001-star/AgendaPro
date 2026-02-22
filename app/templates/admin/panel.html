@@ -1,0 +1,60 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="p-8 max-w-4xl mx-auto">
+    
+    <div class="mb-8 border-b pb-4">
+        <h1 class="text-2xl font-bold text-red-600 tracking-tight">⚡ Panel de Super Administrador</h1>
+        <p class="text-slate-500 text-sm">Estadísticas globales de la plataforma.</p>
+    </div>
+
+    <!-- TARJETAS DE RESUMEN -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-indigo-600">
+            <p class="text-sm text-slate-500 uppercase font-bold">Profesionales Activos</p>
+            <p class="text-4xl font-bold text-slate-800 mt-2">{{ total_users }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-600">
+            <p class="text-sm text-slate-500 uppercase font-bold">Total Turnos Reservados</p>
+            <p class="text-4xl font-bold text-slate-800 mt-2">{{ total_appointments }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-600">
+            <p class="text-sm text-slate-500 uppercase font-bold">Días Habilitados</p>
+            <p class="text-4xl font-bold text-slate-800 mt-2">{{ total_days_configured }}</p>
+        </div>
+    </div>
+
+    <!-- LISTADOS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Ultimos Registrados -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Últimos Profesionales</h3>
+            <ul class="space-y-3">
+                {% for user in latest_users %}
+                <li class="flex justify-between text-sm">
+                    <span class="font-medium text-slate-700">{{ user.name }}</span>
+                    <span class="text-slate-400 text-xs">{{ user.email }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Top Profesionales -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Top Profesionales (Más turnos)</h3>
+            <ul class="space-y-3">
+                {% for name, count in top_users %}
+                <li class="flex justify-between text-sm">
+                    <span class="font-medium text-slate-700">{{ name }}</span>
+                    <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ count }} turnos</span>
+                </li>
+                {% endfor %}
+                {% if not top_users %}
+                    <p class="text-sm text-slate-400">Aún no hay datos.</p>
+                {% endif %}
+            </ul>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

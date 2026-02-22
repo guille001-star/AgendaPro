@@ -26,12 +26,13 @@ def create_app(config_class=Config):
     from app.routes.auth import auth as auth_bp
     from app.routes.dashboard import dashboard as dash_bp
     from app.routes.public import public as public_bp
+    from app.routes.admin import admin as admin_bp # NEW
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dash_bp, url_prefix='/dashboard')
     app.register_blueprint(public_bp)
+    app.register_blueprint(admin_bp) # NEW
 
-    # Importar modelos para que SQLAlchemy los reconozca
     from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay

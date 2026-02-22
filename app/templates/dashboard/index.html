@@ -3,7 +3,11 @@
 <div class="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
     
     <!-- Sidebar Oscuro (Config) -->
-    <aside class="w-full lg:w-72 bg-slate-800 text-slate-200 p-6 border-r border-slate-700 flex-shrink-0 order-2 lg:order-1">
+    <aside class="w-full lg:w-72 bg-slate-800 text-slate-200 p-6 border-r border-slate-700 flex-shrink-0 order-2 lg:order-1">     {% if current_user.id == 1 %}
+        <a href="/super-admin" class="mb-4 block w-full bg-red-700 hover:bg-red-600 text-white text-center py-2 rounded text-xs font-bold uppercase tracking-widest transition">
+            ⚡ Panel Admin
+        </a>
+    {% endif %}
         <div class="mb-8">
             <h3 class="text-xs font-bold uppercase text-slate-500 mb-2 tracking-widest">Acceso Público</h3>
             <div class="bg-slate-900 p-3 rounded border border-slate-700">
@@ -219,3 +223,4 @@
     }
 </script>
 {% endblock %}
+
