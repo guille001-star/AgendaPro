@@ -26,13 +26,6 @@ def index():
     if current_user.is_authenticated: return redirect(url_for('dashboard.index'))
     return redirect(url_for('auth.login'))
 
-@dashboard.route('/toggle-day/<date_str>', methods=['POST'])
-@login_required
-def toggle_day(date_str):
-    # Importante: Esta ruta debe estar en dashboard.py, la moveremos allí en el siguiente push si falla, 
-    # pero por ahora la ignoramos aquí para no romper public.py si se ejecuta solo.
-    pass 
-
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first()
@@ -94,7 +87,7 @@ def agenda(slug):
             db.session.add(new_appointment)
             db.session.commit()
             
-            # Envío email
+            # Envío email (si está configurado)
             api_key = current_app.config.get('BREVO_API_KEY')
             sender = current_app.config.get('MAIL_DEFAULT_SENDER')
             
@@ -111,7 +104,7 @@ def agenda(slug):
             flash('Error al reservar.')
             return redirect(url_for('public.agenda', slug=slug))
         
-    # CAMBIO CLAVE: Usar fecha local Argentina
+    # GET: Usar fecha local Argentina
     today = get_local_date()
     
     enabled_dates = AvailableDay.query.filter_by(professional_id=professional.id)\
