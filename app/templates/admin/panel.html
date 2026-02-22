@@ -1,10 +1,10 @@
 ﻿{% extends "base.html" %}
 {% block content %}
-<div class="p-8 max-w-4xl mx-auto">
+<div class="p-8 max-w-6xl mx-auto">
     
     <div class="mb-8 border-b pb-4">
         <h1 class="text-2xl font-bold text-red-600 tracking-tight">⚡ Panel de Super Administrador</h1>
-        <p class="text-slate-500 text-sm">Estadísticas globales de la plataforma.</p>
+        <p class="text-slate-500 text-sm">Gestión global de la plataforma.</p>
     </div>
 
     <!-- TARJETAS DE RESUMEN -->
@@ -23,38 +23,58 @@
         </div>
     </div>
 
-    <!-- LISTADOS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- GESTIÓN DE USUARIOS (NUEVO) -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8 overflow-x-auto">
+        <h3 class="font-bold text-slate-800 mb-4 text-lg border-b pb-2">Gestión de Profesionales</h3>
         
-        <!-- Ultimos Registrados -->
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Últimos Profesionales</h3>
-            <ul class="space-y-3">
-                {% for user in latest_users %}
-                <li class="flex justify-between text-sm">
-                    <span class="font-medium text-slate-700">{{ user.name }}</span>
-                    <span class="text-slate-400 text-xs">{{ user.email }}</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="bg-yellow-100 text-yellow-800 p-3 rounded mb-4 text-sm">
+                    {% for message in messages %}{{ message }}{% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
-        <!-- Top Profesionales -->
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Top Profesionales (Más turnos)</h3>
-            <ul class="space-y-3">
-                {% for name, count in top_users %}
-                <li class="flex justify-between text-sm">
-                    <span class="font-medium text-slate-700">{{ name }}</span>
-                    <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ count }} turnos</span>
-                </li>
+        <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-bold text-slate-600">ID</th>
+                    <th class="px-4 py-3 text-left font-bold text-slate-600">Nombre</th>
+                    <th class="px-4 py-3 text-left font-bold text-slate-600">Email (Usuario)</th>
+                    <th class="px-4 py-3 text-left font-bold text-slate-600">Acción</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for user in all_users %}
+                <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3 text-slate-400">{{ user.id }}</td>
+                    <td class="px-4 py-3 font-medium text-slate-800">{{ user.name }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ user.email }}</td>
+                    <td class="px-4 py-3">
+                        <form action="{{ url_for('admin.reset_password', user_id=user.id) }}" method="POST" onsubmit="return confirm('¿Seguro? La nueva contraseña será 123456');">
+                            <button type="submit" class="px-3 py-1 bg-orange-100 text-orange-700 rounded font-bold text-xs hover:bg-orange-200 transition">
+                                Resetear Clave
+                            </button>
+                        </form>
+                    </td>
+                </tr>
                 {% endfor %}
-                {% if not top_users %}
-                    <p class="text-sm text-slate-400">Aún no hay datos.</p>
-                {% endif %}
-            </ul>
-        </div>
-
+            </tbody>
+        </table>
     </div>
+
+    <!-- Top Profesionales -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="font-bold text-slate-800 mb-4 border-b pb-2">Ranking de Turnos</h3>
+        <ul class="space-y-3">
+            {% for name, count in top_users %}
+            <li class="flex justify-between text-sm">
+                <span class="font-medium text-slate-700">{{ name }}</span>
+                <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">{{ count }} turnos</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
 </div>
 {% endblock %}
