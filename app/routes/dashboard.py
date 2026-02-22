@@ -4,7 +4,9 @@ from app import db
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import date, datetime, timedelta
-from sqlalchemy import or_
+import csv
+from io import StringIO
+from flask import Response
 
 dashboard = Blueprint('dashboard', __name__)
 
@@ -13,36 +15,62 @@ dashboard = Blueprint('dashboard', __name__)
 def index():
     today = date.today()
     
-    # Turnos de HOY
     todays_appointments = Appointment.query.filter_by(
         professional_id=current_user.id, 
         date=today, 
         status='reservado'
     ).order_by(Appointment.time).all()
     
-    # Próximos turnos (LIMITADO A 4)
     upcoming_appointments = Appointment.query.filter(
         Appointment.professional_id == current_user.id,
         Appointment.status == 'reservado',
         Appointment.date > today
     ).order_by(Appointment.date, Appointment.time).limit(4).all()
     
-    # Días disponibles futuros
     enabled_days = AvailableDay.query.filter_by(
         professional_id=current_user.id
     ).filter(AvailableDay.date >= today).order_by(AvailableDay.date).limit(30).all()
-    
-    # Calendario completo (para la pestaña)
-    calendar_days = AvailableDay.query.filter_by(
-        professional_id=current_user.id
-    ).filter(AvailableDay.date >= today - timedelta(days=30)).order_by(AvailableDay.date).all()
     
     return render_template('dashboard/index.html', 
                            todays_appointments=todays_appointments,
                            upcoming_appointments=upcoming_appointments,
                            enabled_days=enabled_days,
-                           calendar_days=calendar_days,
                            today=today)
+
+# NUEVO: Endpoint para obtener datos en JSON (para el auto-refresh)
+@dashboard.route('/live-data')
+@login_required
+def live_data():
+    today = date.today()
+    
+    todays = Appointment.query.filter_by(
+        professional_id=current_user.id, 
+        date=today, 
+        status='reservado'
+    ).order_by(Appointment.time).all()
+    
+    upcoming = Appointment.query.filter(
+        Appointment.professional_id == current_user.id,
+        Appointment.status == 'reservado',
+        Appointment.date > today
+    ).order_by(Appointment.date, Appointment.time).limit(4).all()
+    
+    return jsonify({
+        'todays': [{
+            'id': a.id,
+            'time': a.time.strftime('%H:%M'),
+            'name': a.client_name,
+            'phone': a.client_phone,
+            'notes': a.notes
+        } for a in todays],
+        'upcoming': [{
+            'id': a.id,
+            'date': a.date.strftime('%d/%m/%Y'),
+            'time': a.time.strftime('%H:%M'),
+            'name': a.client_name,
+            'phone': a.client_phone
+        } for a in upcoming]
+    })
 
 @dashboard.route('/available-day', methods=['POST'])
 @login_required
@@ -99,13 +127,9 @@ def cancel_appointment(appointment_id):
 @dashboard.route('/export-csv')
 @login_required
 def export_csv():
-    import csv
-    from io import StringIO
-    from flask import Response
-
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Fecha', 'Hora', 'Paciente', 'Teléfono', 'Email', 'Notas', 'Estado'])
+    writer.writerow(['Fecha', 'Hora', 'Paciente', 'Telefono', 'Email', 'Notas', 'Estado'])
 
     appointments = Appointment.query.filter_by(professional_id=current_user.id).order_by(Appointment.date.desc()).all()
     
