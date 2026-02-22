@@ -16,17 +16,34 @@ def index():
 
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
-    professional = User.query.filter_by(slug=slug).first_or_404()
-    selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    # FIX: Usamos ilike o lower para encontrar al profesional sin importar mayúsculas
+    professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first()
+    if not professional:
+        return jsonify({'status': 'error', 'message': 'Profesional no encontrado'}), 404
     
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Fecha inválida'})
+
+    # Buscar disponibilidad
     avail = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
     if not avail:
-        return jsonify({'status': 'error', 'message': 'Día no disponible'})
+        return jsonify({'status': 'error', 'message': 'Día no disponible', 'slots': []})
     
-    # FIX: Filtrar solo turnos 'reservado', ignorar 'cancelado'
-    booked = Appointment.query.filter_by(professional_id=professional.id, date=selected_date, status='reservado').all()
+    # Verificar que tenga horarios definidos
+    if not avail.start_time or not avail.end_time:
+         return jsonify({'status': 'error', 'message': 'Horario no configurado para este día', 'slots': []})
+
+    # Filtrar turnos reservados
+    booked = Appointment.query.filter_by(
+        professional_id=professional.id, 
+        date=selected_date, 
+        status='reservado'
+    ).all()
     booked_times = [t.time for t in booked]
     
+    # Generar slots
     slots = []
     current_t = datetime.combine(date.today(), avail.start_time)
     end_t = datetime.combine(date.today(), avail.end_time)
@@ -50,6 +67,7 @@ def get_slots(slug, date_str):
 
 @public.route('/agenda/<slug>', methods=['GET', 'POST'])
 def agenda(slug):
+    # Búsqueda case insensitive
     professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first_or_404()
     
     if request.method == 'POST':
@@ -57,7 +75,7 @@ def agenda(slug):
         client_phone = request.form.get('phone')
         date_str = request.form.get('date')
         time_str = request.form.get('time_slot')
-        notes = request.form.get('notes') # NUEVO
+        notes = request.form.get('notes')
         
         if not time_str:
             flash('Por favor selecciona un horario.')
@@ -73,12 +91,13 @@ def agenda(slug):
                 client_phone=client_phone,
                 date=date_obj,
                 time=time_obj,
-                notes=notes # NUEVO
+                notes=notes
             )
             db.session.add(new_appointment)
             db.session.commit()
             flash('¡Turno reservado con éxito!')
         except Exception as e:
+            print(f"Error: {e}")
             flash('Error al reservar.')
             
         return redirect(url_for('public.agenda', slug=slug))
