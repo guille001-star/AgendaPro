@@ -16,26 +16,24 @@ def index():
 
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
-    # FIX: Usamos ilike o lower para encontrar al profesional sin importar mayúsculas
     professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first()
     if not professional:
-        return jsonify({'status': 'error', 'message': 'Profesional no encontrado'}), 404
-    
+        return jsonify({'status': 'error', 'message': 'Profesional no encontrado'})
+
     try:
         selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'status': 'error', 'message': 'Fecha inválida'})
 
-    # Buscar disponibilidad
     avail = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
     if not avail:
-        return jsonify({'status': 'error', 'message': 'Día no disponible', 'slots': []})
-    
-    # Verificar que tenga horarios definidos
-    if not avail.start_time or not avail.end_time:
-         return jsonify({'status': 'error', 'message': 'Horario no configurado para este día', 'slots': []})
+        return jsonify({'status': 'error', 'message': 'Día no disponible'})
 
-    # Filtrar turnos reservados
+    if not avail.start_time or not avail.end_time:
+         return jsonify({'status': 'error', 'message': 'Horario no configurado'})
+
+    duration_minutes = professional.appointment_duration or 30
+    
     booked = Appointment.query.filter_by(
         professional_id=professional.id, 
         date=selected_date, 
@@ -43,20 +41,22 @@ def get_slots(slug, date_str):
     ).all()
     booked_times = [t.time for t in booked]
     
-    # Generar slots
     slots = []
     current_t = datetime.combine(date.today(), avail.start_time)
     end_t = datetime.combine(date.today(), avail.end_time)
-    duration = timedelta(minutes=professional.appointment_duration)
+    duration = timedelta(minutes=duration_minutes)
     
     while current_t.time() < end_t.time():
         slot_time = current_t.time()
         is_booked = slot_time in booked_times
         
+        # FIX: Desactivamos temporalmente el chequeo de "hora pasada" 
+        # porque el servidor está en UTC y causa conflictos con tu hora local.
+        # En una futura versión añadiremos selección de zona horaria.
         is_past = False
-        if selected_date == date.today():
-            if slot_time < datetime.now().time():
-                is_past = True
+        # if selected_date == date.today():
+        #     if slot_time < datetime.now().time():
+        #         is_past = True
 
         if not is_booked and not is_past:
             slots.append(slot_time.strftime('%H:%M'))
@@ -67,7 +67,6 @@ def get_slots(slug, date_str):
 
 @public.route('/agenda/<slug>', methods=['GET', 'POST'])
 def agenda(slug):
-    # Búsqueda case insensitive
     professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first_or_404()
     
     if request.method == 'POST':
@@ -97,7 +96,7 @@ def agenda(slug):
             db.session.commit()
             flash('¡Turno reservado con éxito!')
         except Exception as e:
-            print(f"Error: {e}")
+            db.session.rollback() # Importante revertir si falla
             flash('Error al reservar.')
             
         return redirect(url_for('public.agenda', slug=slug))

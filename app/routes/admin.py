@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, redirect, url_for, flash, request
+﻿from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app import db
 from app.models.user import User
@@ -13,15 +13,16 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         is_admin = False
         if current_user.is_authenticated:
-            # 1. Si eres el primer usuario (ID 1)
+            # Acceso si eres el primer usuario (ID 1)
             if current_user.id == 1:
                 is_admin = True
-            # 2. Si tu email es el administrador principal
+            # Acceso si tu email es el administrador (TU EMAIL)
             if current_user.email == 'geopat001@gmail.com':
                 is_admin = True
                 
         if not is_admin:
-            return "Acceso denegado. Solo para administradores.", 403
+            flash('No tienes permisos de administrador.')
+            return redirect(url_for('dashboard.index')) # Redirigir a dashboard en lugar de error feo
         return f(*args, **kwargs)
     decorated_function.__name__ = f.__name__
     return decorated_function
