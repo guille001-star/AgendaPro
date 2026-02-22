@@ -1,10 +1,13 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+﻿import io
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
 from app import db
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import datetime, timedelta, date
 import calendar
+import csv
 
 dashboard = Blueprint('dashboard', __name__)
 
@@ -18,7 +21,6 @@ def index():
     
     cal = calendar.Calendar()
     month_days = cal.itermonthdays2(year, month)
-    
     enabled_dates = AvailableDay.query.filter_by(professional_id=current_user.id).all()
     enabled_map = {d.date: d for d in enabled_dates}
     
@@ -30,21 +32,17 @@ def index():
             current_date = date(year, month, day)
             is_enabled = current_date in enabled_map
             is_past = current_date < date.today()
-            
             calendar_data.append({
-                'type': 'day',
-                'day': day,
-                'date': current_date,
-                'is_enabled': is_enabled,
-                'is_past': is_past,
+                'type': 'day', 'day': day, 'date': current_date,
+                'is_enabled': is_enabled, 'is_past': is_past,
                 'start': enabled_map.get(current_date).start_time if is_enabled else None,
                 'end': enabled_map.get(current_date).end_time if is_enabled else None
             })
 
     hoy = date.today()
-    turnos_hoy = Appointment.query.filter_by(professional_id=current_user.id)\
+    turnos_hoy = Appointment.query.filter_by(professional_id=current_user.id, status='reservado')\
         .filter(Appointment.date == hoy).order_by(Appointment.time).all()
-    proximos = Appointment.query.filter_by(professional_id=current_user.id)\
+    proximos = Appointment.query.filter_by(professional_id=current_user.id, status='reservado')\
         .filter(Appointment.date > hoy).order_by(Appointment.date, Appointment.time).limit(10).all()
     
     month_name = datetime(year, month, 1).strftime("%B").capitalize()
@@ -65,42 +63,61 @@ def settings():
         flash('Duración actualizada.')
     return redirect(url_for('dashboard.index'))
 
+# NUEVO: Exportar CSV
+@dashboard.route('/export')
+@login_required
+def export_csv():
+    turnos = Appointment.query.filter_by(professional_id=current_user.id).order_by(Appointment.date.desc()).all()
+    
+    def generate():
+        data = [['Fecha', 'Hora', 'Cliente', 'Telefono', 'Notas', 'Estado']]
+        for t in turnos:
+            data.append([t.date, t.time, t.client_name, t.client_phone, t.notes or '', t.status])
+        
+        si = io.StringIO()
+        cw = csv.writer(si)
+        cw.writerows(data)
+        return si.getvalue()
+
+    return Response(
+        generate(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment;filename=turnos.csv"}
+    )
+
+# NUEVO: Cancelar Turno
+@dashboard.route('/cancel/<int:id>')
+@login_required
+def cancel_appointment(id):
+    turno = Appointment.query.get_or_404(id)
+    if turno.professional_id == current_user.id:
+        turno.status = 'cancelado'
+        db.session.commit()
+        flash('Turno cancelado. El horario quedó libre para nuevos pacientes.')
+    return redirect(url_for('dashboard.index'))
+
 @dashboard.route('/save_day', methods=['POST'])
 @login_required
 def save_day():
     data = request.get_json()
-    date_str = data.get('date')
-    start_str = data.get('start_time')
-    end_str = data.get('end_time')
-    
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-    start_obj = datetime.strptime(start_str, '%H:%M').time()
-    end_obj = datetime.strptime(end_str, '%H:%M').time()
+    date_obj = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
+    start_obj = datetime.strptime(data.get('start_time'), '%H:%M').time()
+    end_obj = datetime.strptime(data.get('end_time'), '%H:%M').time()
     
     avail = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_obj).first()
-    
     if avail:
         avail.start_time = start_obj
         avail.end_time = end_obj
     else:
-        new_avail = AvailableDay(
-            professional_id=current_user.id,
-            date=date_obj,
-            start_time=start_obj,
-            end_time=end_obj
-        )
+        new_avail = AvailableDay(professional_id=current_user.id, date=date_obj, start_time=start_obj, end_time=end_obj)
         db.session.add(new_avail)
-    
     db.session.commit()
     return jsonify({'status': 'success'})
 
 @dashboard.route('/delete_day', methods=['POST'])
 @login_required
 def delete_day():
-    data = request.get_json()
-    date_str = data.get('date')
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-    
+    date_obj = datetime.strptime(request.get_json().get('date'), '%Y-%m-%d').date()
     avail = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_obj).first()
     if avail:
         db.session.delete(avail)

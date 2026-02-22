@@ -14,7 +14,6 @@ def index():
         return redirect(url_for('dashboard.index'))
     return redirect(url_for('auth.login'))
 
-# CORRECCIÓN: Ruta coincide con el fetch JS (/agenda/get-slots/...)
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first_or_404()
@@ -24,7 +23,8 @@ def get_slots(slug, date_str):
     if not avail:
         return jsonify({'status': 'error', 'message': 'Día no disponible'})
     
-    booked = Appointment.query.filter_by(professional_id=professional.id, date=selected_date).all()
+    # FIX: Filtrar solo turnos 'reservado', ignorar 'cancelado'
+    booked = Appointment.query.filter_by(professional_id=professional.id, date=selected_date, status='reservado').all()
     booked_times = [t.time for t in booked]
     
     slots = []
@@ -57,6 +57,7 @@ def agenda(slug):
         client_phone = request.form.get('phone')
         date_str = request.form.get('date')
         time_str = request.form.get('time_slot')
+        notes = request.form.get('notes') # NUEVO
         
         if not time_str:
             flash('Por favor selecciona un horario.')
@@ -71,13 +72,13 @@ def agenda(slug):
                 client_name=client_name,
                 client_phone=client_phone,
                 date=date_obj,
-                time=time_obj
+                time=time_obj,
+                notes=notes # NUEVO
             )
             db.session.add(new_appointment)
             db.session.commit()
             flash('¡Turno reservado con éxito!')
         except Exception as e:
-            print(f"Error: {e}")
             flash('Error al reservar.')
             
         return redirect(url_for('public.agenda', slug=slug))
