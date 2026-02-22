@@ -1,11 +1,13 @@
 ﻿from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_mail import Mail
 from config import Config, format_date
 from datetime import datetime
 
 db = SQLAlchemy()
 login_manager = LoginManager()
+mail = Mail()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
 login_manager.login_message_category = 'error'
@@ -16,6 +18,7 @@ def create_app(config_class=Config):
 
     db.init_app(app)
     login_manager.init_app(app)
+    mail.init_app(app) # Iniciar Mail
 
     app.jinja_env.filters['format_date'] = format_date
 
@@ -26,12 +29,12 @@ def create_app(config_class=Config):
     from app.routes.auth import auth as auth_bp
     from app.routes.dashboard import dashboard as dash_bp
     from app.routes.public import public as public_bp
-    from app.routes.admin import admin as admin_bp # NEW
+    from app.routes.admin import admin as admin_bp
 
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dash_bp, url_prefix='/dashboard')
     app.register_blueprint(public_bp)
-    app.register_blueprint(admin_bp) # NEW
+    app.register_blueprint(admin_bp)
 
     from app.models.user import User
     from app.models.appointment import Appointment

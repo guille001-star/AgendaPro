@@ -1,6 +1,7 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import current_user
-from app import db
+from flask_mail import Message
+from app import db, mail
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
@@ -26,76 +27,26 @@ def get_slots(slug, date_str):
         return jsonify({'status': 'error', 'message': 'Fecha inválida', 'slots': []})
 
     avail = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
-    
-    # Si no hay disponibilidad, damos detalles
     if not avail:
-        return jsonify({
-            'status': 'error', 
-            'message': 'No hay registro de disponibilidad para este día.',
-            'slots': [],
-            'debug': 'El día no está en la tabla AvailableDay para este ID.'
-        })
+        return jsonify({'status': 'error', 'message': 'Día no habilitado', 'slots': []})
 
-    # Si falta hora inicio o fin
     if not avail.start_time or not avail.end_time:
-         return jsonify({
-            'status': 'error', 
-            'message': 'El día está habilitado pero faltan las horas (inicio/fin).',
-            'slots': [],
-            'debug': f'ID Profesional: {professional.id} | Start: {avail.start_time} | End: {avail.end_time}'
-        })
+         return jsonify({'status': 'error', 'message': 'Horario no configurado', 'slots': []})
 
     duration_minutes = professional.appointment_duration or 30
-    
-    booked = Appointment.query.filter_by(
-        professional_id=professional.id, 
-        date=selected_date, 
-        status='reservado'
-    ).all()
+    booked = Appointment.query.filter_by(professional_id=professional.id, date=selected_date, status='reservado').all()
     booked_times = [t.time for t in booked]
     
     slots = []
-    # Usamos una fecha dummy para combinar
     current_t = datetime.combine(date.today(), avail.start_time)
     end_t = datetime.combine(date.today(), avail.end_time)
     duration = timedelta(minutes=duration_minutes)
     
-    # Bucle para generar slots
-    safety_counter = 0 # Evitar bucles infinitos por error
     while current_t.time() < end_t.time():
-        safety_counter += 1
-        if safety_counter > 100: break # Seguro
-
         slot_time = current_t.time()
-        
-        # Verificamos si está reservado
-        is_booked = slot_time in booked_times
-        
-        # Verificamos si pasó (ignorado por ahora)
-        is_past = False
-        # if selected_date == date.today():
-        #    if slot_time < datetime.now().time(): is_past = True
-
-        if not is_booked and not is_past:
+        if slot_time not in booked_times:
             slots.append(slot_time.strftime('%H:%M'))
-        
         current_t += duration
-        
-    # Si la lista está vacía, devolvemos info de por qué
-    if not slots:
-        return jsonify({
-            'status': 'warning', 
-            'message': 'Se generó una lista vacía de horarios.',
-            'slots': [],
-            'debug': {
-                'start_time': str(avail.start_time),
-                'end_time': str(avail.end_time),
-                'duration_min': duration_minutes,
-                'booked_count': len(booked),
-                'loop_count': safety_counter,
-                'now_utc': str(datetime.utcnow())
-            }
-        })
         
     return jsonify({'slots': slots})
 
@@ -105,6 +56,7 @@ def agenda(slug):
     
     if request.method == 'POST':
         client_name = request.form.get('name')
+        client_email = request.form.get('email') # NUEVO
         client_phone = request.form.get('phone')
         date_str = request.form.get('date')
         time_str = request.form.get('time_slot')
@@ -121,6 +73,7 @@ def agenda(slug):
             new_appointment = Appointment(
                 professional_id=professional.id,
                 client_name=client_name,
+                client_email=client_email,
                 client_phone=client_phone,
                 date=date_obj,
                 time=time_obj,
@@ -128,9 +81,37 @@ def agenda(slug):
             )
             db.session.add(new_appointment)
             db.session.commit()
-            flash('¡Turno reservado con éxito!')
+            
+            # --- ENVÍO DE EMAIL ---
+            if client_email and current_app.config['MAIL_USERNAME']:
+                try:
+                    msg = Message(
+                        subject=f"Confirmación de Turno con {professional.name}",
+                        sender=current_app.config['MAIL_USERNAME'],
+                        recipients=[client_email]
+                    )
+                    msg.body = f"""Hola {client_name}!
+
+Tu turno ha sido reservado con éxito.
+
+Detalles:
+Profesional: {professional.name}
+Fecha: {date_obj.strftime('%d/%m/%Y')}
+Hora: {time_obj.strftime('%H:%M')}
+
+Gracias por usar AgendaPro.
+"""
+                    mail.send(msg)
+                    flash('¡Turno reservado! Revisa tu correo para la confirmación.')
+                except Exception as e:
+                    print(f"Error enviando email: {e}")
+                    flash('Turno reservado, pero hubo un error al enviar el email.')
+            else:
+                flash('¡Turno reservado con éxito!')
+                
         except Exception as e:
             db.session.rollback()
+            print(f"Error reservando: {e}")
             flash('Error al reservar.')
             
         return redirect(url_for('public.agenda', slug=slug))
