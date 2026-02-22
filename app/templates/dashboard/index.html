@@ -2,6 +2,7 @@
 {% block content %}
 <div class="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
     
+    <!-- Sidebar Oscuro (Config) -->
     <aside class="w-full lg:w-72 bg-slate-800 text-slate-200 p-6 border-r border-slate-700 flex-shrink-0 order-2 lg:order-1">
         <div class="mb-8">
             <h3 class="text-xs font-bold uppercase text-slate-500 mb-2 tracking-widest">Acceso Público</h3>
@@ -24,90 +25,125 @@
         
         <div class="bg-slate-900/50 p-4 rounded border border-slate-700 mt-6">
             <h4 class="text-xs font-bold text-indigo-400 mb-2 uppercase">Instrucciones</h4>
-            <p class="text-xs text-slate-400 leading-relaxed">Haz clic en un día para definir tus horarios de atención. Haz clic nuevamente en un día activo para editarlo o quitarlo.</p>
+            <p class="text-xs text-slate-400 leading-relaxed">Haz clic en un día en el calendario de abajo para definir tus horarios de atención.</p>
         </div>
     </aside>
 
+    <!-- Contenido Principal -->
     <div class="flex-1 p-6 lg:p-8 order-1 lg:order-2 overflow-auto">
         
-        <div class="mb-8 border-b border-slate-200 pb-4 flex justify-between items-center">
+        <div class="mb-6 border-b border-slate-200 pb-4 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Mi Disponibilidad</h1>
-                <p class="text-slate-500 text-sm mt-1">{{ month_name }} {{ year }}</p>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Panel de Turnos</h1>
+                <p class="text-slate-500 text-sm mt-1">Resumen del día y próximos atendidos</p>
             </div>
-            <div class="flex gap-2">
-                <a href="{{ url_for('dashboard.index', month=month-1 if month > 1 else 12, year=year if month > 1 else year-1) }}" class="px-3 py-1 bg-white border rounded text-sm hover:bg-slate-50">&larr;</a>
-                <a href="{{ url_for('dashboard.index', month=month+1 if month < 12 else 1, year=year if month < 12 else year+1) }}" class="px-3 py-1 bg-white border rounded text-sm hover:bg-slate-50">&rarr;</a>
-            </div>
+            <!-- Indicador de actualización -->
+            <span id="live-indicator" class="flex items-center gap-1 text-xs text-green-600 font-medium">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> En vivo
+            </span>
         </div>
 
-        <div class="bg-white rounded-lg shadow-sm border p-4 mb-8">
-            <div class="grid grid-cols-7 gap-1 text-center mb-2 border-b pb-2">
-                <span class="text-xs font-bold text-slate-400 uppercase">Lun</span>
-                <span class="text-xs font-bold text-slate-400 uppercase">Mar</span>
-                <span class="text-xs font-bold text-slate-400 uppercase">Mié</span>
-                <span class="text-xs font-bold text-slate-400 uppercase">Jue</span>
-                <span class="text-xs font-bold text-slate-400 uppercase">Vie</span>
-                <span class="text-xs font-bold text-slate-400 uppercase">Sáb</span>
-                <span class="text-xs font-bold text-slate-400 uppercase">Dom</span>
-            </div>
-            <div class="grid grid-cols-7 gap-1">
-                {% for day in calendar_data %}
-                    {% if day.type == 'empty' %}
-                        <div class="h-20 bg-slate-50 rounded"></div>
-                    {% else %}
-                        <div class="h-20 border rounded p-1 cursor-pointer transition-all duration-150
-                                    {% if day.is_enabled %}bg-green-50 border-green-400 ring-1 ring-green-400{% endif %}
-                                    {% if day.is_past %}opacity-50 bg-slate-50 border-slate-200 cursor-not-allowed{% endif %}
-                                    {% if not day.is_enabled and not day.is_past %}hover:border-indigo-300 hover:bg-slate-50 border-slate-200{% endif %}"
-                             {% if not day.is_past %} 
-                                onclick="openModal('{{ day.date }}', {% if day.start %}'{{ day.start.strftime('%H:%M') }}'{% else %}'09:00'{% endif %}, {% if day.end %}'{{ day.end.strftime('%H:%M') }}'{% else %}'18:00'{% endif %}, {{ 'true' if day.is_enabled else 'false' }})" 
-                             {% endif %}>
-                            <div class="flex justify-between items-start h-full">
-                                <span class="text-sm font-bold text-slate-700 {% if day.is_enabled %}text-green-700{% endif %}">{{ day.day }}</span>
-                                {% if day.is_enabled %}
-                                    <div class="text-right mt-1">
-                                        <span class="block text-[9px] text-green-600 font-mono font-bold">{{ day.start.strftime('%H:%M') }}</span>
-                                        <span class="block text-[9px] text-green-600 font-mono font-bold">{{ day.end.strftime('%H:%M') }}</span>
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white p-4 rounded shadow-sm border">
-                <h3 class="font-bold text-slate-800 mb-3 text-sm uppercase">Turnos Hoy ({{ turnos_hoy|length }})</h3>
+        <!-- 1. SECCIÓN TURNOS (ARRIBA - PRIORIDAD) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-4 text-lg uppercase tracking-wide flex items-center gap-2">
+                    <span class="w-3 h-3 bg-indigo-600 rounded-full"></span> Turnos Hoy ({{ turnos_hoy|length }})
+                </h3>
                 {% if turnos_hoy %}
-                    <ul class="space-y-2">
+                    <div class="space-y-3">
                     {% for t in turnos_hoy %}
-                        <li class="text-sm border-l-2 border-indigo-500 pl-2"><span class="font-mono">{{ t.time }}</span> - {{ t.client_name }}</li>
+                        <div class="flex justify-between items-center bg-slate-50 p-3 rounded border-l-4 border-indigo-600">
+                            <div>
+                                <p class="font-bold text-slate-800">{{ t.client_name }}</p>
+                                <p class="text-xs text-slate-500">{{ t.client_phone }}</p>
+                            </div>
+                            <span class="font-mono text-lg font-bold text-slate-600">{{ t.time }}</span>
+                        </div>
                     {% endfor %}
-                    </ul>
+                    </div>
                 {% else %}
-                    <p class="text-sm text-slate-400">Sin turnos.</p>
+                    <div class="text-center py-8 text-slate-400 border-2 border-dashed rounded">
+                        <p>Sin turnos hoy.</p>
+                    </div>
                 {% endif %}
             </div>
-             <div class="bg-white p-4 rounded shadow-sm border">
-                <h3 class="font-bold text-slate-800 mb-3 text-sm uppercase">Próximos</h3>
-                 <ul class="space-y-2">
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-800 mb-4 text-lg uppercase tracking-wide flex items-center gap-2">
+                    <span class="w-3 h-3 bg-slate-400 rounded-full"></span> Próximos Turnos
+                </h3>
+                 <div class="space-y-3">
                     {% for t in proximos %}
-                        <li class="text-sm border-l-2 border-slate-300 pl-2"><span class="font-mono text-xs">{{ t.date|format_date }}</span> - {{ t.client_name }}</li>
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <div>
+                                <p class="font-medium text-slate-800">{{ t.client_name }}</p>
+                                <p class="text-xs text-slate-500">{{ t.date|format_date }}</p>
+                            </div>
+                            <span class="font-mono text-sm text-slate-600">{{ t.time }}</span>
+                        </div>
+                    {% else %}
+                        <p class="text-slate-400 text-sm">Sin turnos futuros.</p>
                     {% endfor %}
-                    </ul>
+                    </div>
             </div>
         </div>
+
+        <!-- 2. CALENDARIO (ABAJO - CONFIGURACIÓN) -->
+        <div class="mb-8 border-t pt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-slate-600">Configuración de Disponibilidad</h2>
+                <div class="flex gap-2">
+                    <a href="{{ url_for('dashboard.index', month=month-1 if month > 1 else 12, year=year if month > 1 else year-1) }}" class="px-3 py-1 bg-white border rounded text-sm hover:bg-slate-50">&larr;</a>
+                    <span class="px-3 py-1 text-sm font-bold text-slate-600">{{ month_name }} {{ year }}</span>
+                    <a href="{{ url_for('dashboard.index', month=month+1 if month < 12 else 1, year=year if month < 12 else year+1) }}" class="px-3 py-1 bg-white border rounded text-sm hover:bg-slate-50">&rarr;</a>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm border p-4">
+                <div class="grid grid-cols-7 gap-1 text-center mb-2 border-b pb-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Lun</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase">Mar</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase">Mié</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase">Jue</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase">Vie</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase">Sáb</span>
+                    <span class="text-xs font-bold text-slate-400 uppercase">Dom</span>
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                    {% for day in calendar_data %}
+                        {% if day.type == 'empty' %}
+                            <div class="h-16 bg-slate-50 rounded"></div>
+                        {% else %}
+                            <div class="h-16 border rounded p-1 cursor-pointer transition-all duration-150 text-xs
+                                        {% if day.is_enabled %}bg-green-50 border-green-400 ring-1 ring-green-400{% endif %}
+                                        {% if day.is_past %}opacity-40 bg-slate-100 border-slate-200 cursor-not-allowed{% endif %}
+                                        {% if not day.is_enabled and not day.is_past %}hover:border-indigo-300 hover:bg-slate-50 border-slate-200{% endif %}"
+                                 {% if not day.is_past %} 
+                                    onclick="openModal('{{ day.date }}', {% if day.start %}'{{ day.start.strftime('%H:%M') }}'{% else %}'09:00'{% endif %}, {% if day.end %}'{{ day.end.strftime('%H:%M') }}'{% else %}'18:00'{% endif %}, {{ 'true' if day.is_enabled else 'false' }})" 
+                                 {% endif %}>
+                                <div class="flex flex-col justify-between h-full">
+                                    <span class="font-bold text-slate-600 {% if day.is_enabled %}text-green-700{% endif %}">{{ day.day }}</span>
+                                    {% if day.is_enabled %}
+                                        <div class="text-right text-[8px] text-green-600 font-mono leading-tight">
+                                            {{ day.start.strftime('%H:%M') }}<br>{{ day.end.strftime('%H:%M') }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <!-- MODAL -->
 <div id="day-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-2xl w-80 overflow-hidden transform transition-all">
+    <div class="bg-white rounded-lg shadow-2xl w-80 overflow-hidden">
         <div class="bg-slate-900 p-4 text-white">
-            <h3 class="font-bold" id="modal-title">Configurar Día</h3>
+            <h3 class="font-bold">Configurar Día</h3>
         </div>
         <div class="p-6 space-y-4">
             <p class="text-sm text-gray-500 text-center">Define tu horario de atención.</p>
@@ -131,7 +167,13 @@
     </div>
 </div>
 
+<!-- AUTO REFRESH SCRIPT -->
 <script>
+    // Recarga la página cada 30 segundos para mostrar nuevos turnos automáticamente
+    setTimeout(function(){
+        location.reload();
+    }, 30000);
+
     function openModal(dateStr, startTime, endTime, isEdit) {
         const modal = document.getElementById('day-modal');
         document.getElementById('modal-date').value = dateStr;
