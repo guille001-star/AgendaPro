@@ -11,8 +11,17 @@ admin = Blueprint('admin', __name__)
 
 def admin_required(f):
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.id != 1:
-            return "Acceso denegado", 403
+        is_admin = False
+        if current_user.is_authenticated:
+            # 1. Si eres el primer usuario (ID 1)
+            if current_user.id == 1:
+                is_admin = True
+            # 2. Si tu email es el administrador principal
+            if current_user.email == 'geopat001@gmail.com':
+                is_admin = True
+                
+        if not is_admin:
+            return "Acceso denegado. Solo para administradores.", 403
         return f(*args, **kwargs)
     decorated_function.__name__ = f.__name__
     return decorated_function
@@ -25,7 +34,6 @@ def panel():
     total_appointments = Appointment.query.count()
     total_days_configured = AvailableDay.query.count()
     
-    # Mostramos TODOS los usuarios para gestión
     all_users = User.query.order_by(User.id.desc()).all()
     
     top_users = db.session.query(
@@ -40,13 +48,11 @@ def panel():
                            all_users=all_users,
                            top_users=top_users)
 
-# NUEVA RUTA: Resetear contraseña
 @admin.route('/super-admin/reset-password/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def reset_password(user_id):
     user = User.query.get_or_404(user_id)
-    # Reseteamos la contraseña a '123456'
     user.set_password('123456')
     db.session.commit()
     flash(f'Contraseña de {user.name} reseteada a: 123456')
