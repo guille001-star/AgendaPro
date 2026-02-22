@@ -5,33 +5,46 @@ from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import datetime, timedelta, date
-from urllib.parse import quote
+from threading import Thread
+import requests
 
 public = Blueprint('public', __name__)
 
+# Función de fecha local (Argentina UTC-3)
+def get_local_date():
+    return (datetime.utcnow() - timedelta(hours=3)).date()
+
+def send_brevo_email(api_key, sender_email, to_email, subject, content):
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = { "accept": "application/json", "content-type": "application/json", "api-key": api_key }
+    payload = { "sender": {"email": sender_email}, "to": [{"email": to_email}], "subject": subject, "textContent": content }
+    try: requests.post(url, json=payload, headers=headers)
+    except Exception as e: print(f"Error enviando email: {e}")
+
 @public.route('/')
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard.index'))
+    if current_user.is_authenticated: return redirect(url_for('dashboard.index'))
     return redirect(url_for('auth.login'))
+
+@dashboard.route('/toggle-day/<date_str>', methods=['POST'])
+@login_required
+def toggle_day(date_str):
+    # Importante: Esta ruta debe estar en dashboard.py, la moveremos allí en el siguiente push si falla, 
+    # pero por ahora la ignoramos aquí para no romper public.py si se ejecuta solo.
+    pass 
 
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first()
-    if not professional:
-        return jsonify({'status': 'error', 'message': 'Profesional no encontrado', 'slots': []})
+    if not professional: return jsonify({'status': 'error', 'message': 'Profesional no encontrado', 'slots': []})
 
-    try:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({'status': 'error', 'message': 'Fecha inválida', 'slots': []})
+    try: selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError: return jsonify({'status': 'error', 'message': 'Fecha inválida', 'slots': []})
 
     avail = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
-    if not avail:
-        return jsonify({'status': 'error', 'message': 'Día no habilitado', 'slots': []})
+    if not avail: return jsonify({'status': 'error', 'message': 'Día no habilitado', 'slots': []})
 
-    if not avail.start_time or not avail.end_time:
-         return jsonify({'status': 'error', 'message': 'Horario no configurado', 'slots': []})
+    if not avail.start_time or not avail.end_time: return jsonify({'status': 'error', 'message': 'Horario no configurado', 'slots': []})
 
     duration_minutes = professional.appointment_duration or 30
     booked = Appointment.query.filter_by(professional_id=professional.id, date=selected_date, status='reservado').all()
@@ -44,8 +57,7 @@ def get_slots(slug, date_str):
     
     while current_t.time() < end_t.time():
         slot_time = current_t.time()
-        if slot_time not in booked_times:
-            slots.append(slot_time.strftime('%H:%M'))
+        if slot_time not in booked_times: slots.append(slot_time.strftime('%H:%M'))
         current_t += duration
         
     return jsonify({'slots': slots})
@@ -82,12 +94,16 @@ def agenda(slug):
             db.session.add(new_appointment)
             db.session.commit()
             
-            # REDIRIGIR A PANTALLA DE CONFIRMACIÓN
-            return render_template('public/confirmacion.html', 
-                                   professional=professional, 
-                                   date=date_obj, 
-                                   time=time_obj,
-                                   client_name=client_name)
+            # Envío email
+            api_key = current_app.config.get('BREVO_API_KEY')
+            sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+            
+            if client_email and api_key:
+                subject = f"Confirmación de Turno con {professional.name}"
+                content = f"Hola {client_name}!\nTu turno: {date_obj.strftime('%d/%m/%Y')} a las {time_obj.strftime('%H:%M')}.\nGracias."
+                Thread(target=send_brevo_email, args=(api_key, sender, client_email, subject, content)).start()
+            
+            return render_template('public/confirmacion.html', professional=professional, date=date_obj, time=time_obj, client_name=client_name)
                 
         except Exception as e:
             db.session.rollback()
@@ -95,7 +111,9 @@ def agenda(slug):
             flash('Error al reservar.')
             return redirect(url_for('public.agenda', slug=slug))
         
-    today = date.today()
+    # CAMBIO CLAVE: Usar fecha local Argentina
+    today = get_local_date()
+    
     enabled_dates = AvailableDay.query.filter_by(professional_id=professional.id)\
         .filter(AvailableDay.date >= today).order_by(AvailableDay.date).limit(30).all()
     
