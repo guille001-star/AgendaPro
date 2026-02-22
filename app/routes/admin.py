@@ -28,40 +28,42 @@ def reset_password(user_id):
     flash(f'Password de {user.name} reseteado a 123456')
     return redirect(url_for('admin.index'))
 
-# --- RUTA DE EMERGENCIA PARA LIMPIAR ---
+# --- RUTA DE EMERGENCIA CORREGIDA ---
 @admin.route('/factory-reset')
 def factory_reset():
-    # Seguridad: Solo funciona si la variable RESET_DB es 'true' en Railway
     if os.environ.get('RESET_DB') != 'true':
         return "<h1>Acceso Denegado</h1><p>La variable RESET_DB no está activa.</p>", 403
 
     try:
-        # 1. Borrar todo
+        # 1. Borrar todo (Nombres corregidos: appointments, available_days, users)
         print(">>> INICIANDO LIMPIEZA TOTAL <<<")
-        db.session.execute(text('TRUNCATE TABLE appointments, available_day, users RESTART IDENTITY CASCADE'))
+        
+        # Usamos text() para ejecutar SQL directo
+        # IMPORTANTE: available_days con S al final
+        db.session.execute(text('TRUNCATE TABLE appointments, available_days, users RESTART IDENTITY CASCADE'))
         db.session.commit()
         
         # 2. Crear Usuario Admin (Tú)
         admin = User(
             name='Guillermo Oyarzo',
-            email='geopat001@gmail.com', # Tu email
+            email='geopat001@gmail.com',
             slug='guillermo-oyarzo',
             is_admin=True
         )
-        admin.set_password('admin123') # Tu clave inicial
+        admin.set_password('admin123')
         db.session.add(admin)
         db.session.commit()
         
         return """
-        <h1 style='color:green'>¡ÉXITO!</h1>
+        <h1 style='color:green;font-family:sans-serif'>¡ÉXITO!</h1>
         <p>La base de datos ha sido limpiada.</p>
         <p>Tu usuario Admin ha sido creado.</p>
         <ul>
             <li><b>Email:</b> geopat001@gmail.com</li>
             <li><b>Clave:</b> admin123</li>
         </ul>
-        <a href='/auth/login'>Ir a Login</a>
-        <p><b>IMPORTANTE:</b> Borra la variable RESET_DB de Railway ahora.</p>
+        <a href='/auth/login' style='background:indigo;color:white;padding:10px 20px;text-decoration:none;border-radius:5px'>Ir a Login</a>
+        <p style="color:red"><b>IMPORTANTE:</b> Borra la variable RESET_DB de Railway ahora.</p>
         """
     except Exception as e:
         db.session.rollback()
