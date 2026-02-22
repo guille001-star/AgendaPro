@@ -11,18 +11,14 @@ admin = Blueprint('admin', __name__)
 
 def admin_required(f):
     def decorated_function(*args, **kwargs):
-        is_admin = False
-        if current_user.is_authenticated:
-            # Acceso si eres el primer usuario (ID 1)
-            if current_user.id == 1:
-                is_admin = True
-            # Acceso si tu email es el administrador (TU EMAIL)
-            if current_user.email == 'geopat001@gmail.com':
-                is_admin = True
-                
-        if not is_admin:
-            flash('No tienes permisos de administrador.')
-            return redirect(url_for('dashboard.index')) # Redirigir a dashboard en lugar de error feo
+        # Verificación simple: Si NO es el ID 1 y NO es tu email, rechazar
+        if not current_user.is_authenticated:
+            return redirect(url_for('auth.login'))
+            
+        if current_user.id != 1 and current_user.email != 'geopat001@gmail.com':
+            flash('Acceso denegado. Debes ser administrador.')
+            return redirect(url_for('dashboard.index'))
+            
         return f(*args, **kwargs)
     decorated_function.__name__ = f.__name__
     return decorated_function
@@ -34,12 +30,10 @@ def panel():
     total_users = User.query.count()
     total_appointments = Appointment.query.count()
     total_days_configured = AvailableDay.query.count()
-    
     all_users = User.query.order_by(User.id.desc()).all()
     
     top_users = db.session.query(
-        User.name, 
-        func.count(Appointment.id).label('count')
+        User.name, func.count(Appointment.id).label('count')
     ).join(Appointment).group_by(User.id).order_by(func.count(Appointment.id).desc()).limit(5).all()
 
     return render_template('admin/panel.html', 
