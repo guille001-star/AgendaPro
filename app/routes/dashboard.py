@@ -106,3 +106,15 @@ def delete_day():
         db.session.delete(avail)
         db.session.commit()
     return jsonify({'status': 'success'})
+
+@dashboard.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    new_pass = request.form.get('new_password')
+    if new_pass and len(new_pass) >= 4:
+        current_user.set_password(new_pass)
+        db.session.commit()
+        flash('Contraseña actualizada correctamente.')
+    else:
+        flash('La contraseña debe tener al menos 4 caracteres.')
+    return redirect(url_for('dashboard.index'))
