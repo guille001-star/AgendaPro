@@ -1,189 +1,151 @@
 ﻿{% extends "base.html" %}
 {% block content %}
-<div class="bg-slate-100 min-h-screen pb-20">
-    <header class="bg-slate-900 shadow-lg border-b-4 border-indigo-600 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div class="flex justify-between items-center">
-                <div>
-                    <p class="text-xs text-slate-400 uppercase tracking-wider">Panel de Control</p>
-                    <h1 class="text-2xl font-bold text-white">{{ current_user.name }}</h1>
-                </div>
-                <a href="{{ url_for('auth.logout') }}" class="bg-red-600 text-white text-sm font-bold py-2 px-4 rounded hover:bg-red-700 transition">Salir</a>
-            </div>
+<div class="bg-slate-100 min-h-screen">
+    <header class="bg-slate-900 text-white py-4 px-6 flex justify-between items-center sticky top-0 z-50 border-b-4 border-indigo-600">
+        <div>
+            <p class="text-xs text-slate-400 uppercase tracking-wider">Dashboard</p>
+            <h1 class="text-xl font-bold">{{ current_user.name }}</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="{{ url_for('dashboard.export_csv') }}" class="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">Exportar CSV</a>
+            <a href="{{ url_for('auth.logout') }}" class="text-xs bg-red-600 px-3 py-2 rounded hover:bg-red-700">Salir</a>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <!-- Tabs -->
-        <div class="flex border-b border-slate-200 mb-8 overflow-x-auto">
-            <button onclick="switchTab('calen')" id="btn-calen" class="tab-btn px-6 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 whitespace-nowrap">Calendario y Horarios</button>
-            <button onclick="switchTab('hoy')" id="btn-hoy" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap flex items-center gap-2">
-                Turnos de Hoy <span id="today-badge" class="bg-indigo-100 text-indigo-700 text-xs px-2 rounded-full">{{ todays_appointments|length }}</span>
-            </button>
-            <button onclick="switchTab('proxi')" id="btn-proxi" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Próximos</button>
-            <button onclick="switchTab('link')" id="btn-link" class="tab-btn px-6 py-3 text-sm font-bold text-slate-500 hover:text-slate-700 whitespace-nowrap">Mi Link</button>
-        </div>
-
-        <!-- TAB CALENDARIO (DEFAULT) -->
-        <div id="tab-calen" class="tab-content">
-            <div class="bg-white p-6 rounded-lg shadow mb-8 border-l-4 border-indigo-600">
-                <h3 class="text-lg font-bold mb-4 text-slate-800">1. Habilitar un nuevo día</h3>
-                <form action="{{ url_for('dashboard.add_available_day') }}" method="POST" class="flex gap-4 items-end flex-wrap">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1">FECHA</label>
-                        <input type="date" name="date" required class="border border-slate-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-lg">
-                    </div>
-                    <button type="submit" class="bg-slate-900 text-white font-bold py-2 px-6 rounded hover:bg-slate-700 transition shadow-lg">Habilitar Día</button>
-                </form>
-            </div>
-
-            <div class="bg-white rounded-lg shadow overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
-                    <h3 class="text-lg font-bold text-slate-800">2. Días habilitados</h3>
+    <div class="flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto">
+        
+        <!-- COLUMNA IZQUIERDA: Calendario Visual -->
+        <div class="lg:w-2/3 space-y-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        Calendario de Disponibilidad
+                    </h2>
+                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Clic para activar/desactivar</span>
                 </div>
-                {% if enabled_days %}
-                <ul class="divide-y divide-slate-200">
-                    {% for day in enabled_days %}
-                    <li class="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white hover:bg-slate-50 transition">
-                        <div class="flex items-center gap-3">
-                            <div class="bg-indigo-100 text-indigo-700 font-bold p-3 rounded-lg text-center min-w-[60px]">
-                                <span class="block text-2xl">{{ day.date.day }}</span>
-                                <span class="block text-xs uppercase">{{ day.date.strftime('%b') }}</span>
-                            </div>
-                            <div>
-                                <span class="font-bold text-slate-800 block">{{ day.date|format_date }}</span>
-                                {% if day.start_time %}
-                                    <span class="text-green-600 font-semibold text-sm flex items-center gap-1 mt-1">
-                                        {{ day.start_time.strftime('%H:%M') }} - {{ day.end_time.strftime('%H:%M') }}
-                                    </span>
-                                {% else %}
-                                    <span class="text-orange-500 font-semibold text-xs mt-1 block">⚠ Horario sin definir</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-4 flex-wrap w-full md:w-auto">
-                            <form action="{{ url_for('dashboard.set_hours', day_id=day.id) }}" method="POST" class="flex items-center gap-2 flex-1 md:flex-none">
-                                <input type="time" name="start_time" value="{{ day.start_time.strftime('%H:%M') if day.start_time else '09:00' }}" class="border rounded px-2 py-1 text-sm w-20">
-                                <input type="time" name="end_time" value="{{ day.end_time.strftime('%H:%M') if day.end_time else '18:00' }}" class="border rounded px-2 py-1 text-sm w-20">
-                                <button type="submit" class="bg-indigo-600 text-white text-xs py-1 px-3 rounded hover:bg-indigo-700 font-bold">Guardar</button>
-                            </form>
-                            <form action="{{ url_for('dashboard.toggle_availability', day_id=day.id) }}" method="POST">
-                                <button type="submit" class="text-red-500 text-xs font-bold hover:text-red-700 border border-red-200 rounded px-3 py-1 hover:bg-red-50">Quitar</button>
-                            </form>
-                        </div>
-                    </li>
+                
+                <!-- MES ACTUAL -->
+                <h3 class="text-center font-bold text-slate-700 mb-2 uppercase tracking-wider">{{ today.strftime('%B %Y') }}</h3>
+                <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
+                    <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                    {% for week in current_month_days %}
+                        {% for day in week %}
+                            {% if day.month == today.month %}
+                                <div onclick="toggleDay('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
+                                    {% if day < today %} text-slate-300 cursor-not-allowed bg-slate-50 {% endif %}
+                                    {% if day >= today %}
+                                        {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md transform scale-105 {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
+                                    {% endif %}
+                                ">
+                                    <span>{{ day.day }}</span>
+                                </div>
+                            {% else %}
+                                <div class="p-2 text-slate-200 text-sm"></div>
+                            {% endif %}
+                        {% endfor %}
                     {% endfor %}
-                </ul>
-                {% else %}
-                <div class="p-12 text-center bg-slate-50">
-                    <p class="text-slate-500 font-medium">No tienes días habilitados.</p>
                 </div>
-                {% endif %}
+
+                <!-- MES SIGUIENTE -->
+                {% set next_month_name = (today.replace(day=28) + timedelta(days=10)).strftime('%B %Y') %}
+                <h3 class="text-center font-bold text-slate-700 mb-2 mt-8 uppercase tracking-wider">{{ next_month_name }}</h3>
+                 <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
+                    <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
+                </div>
+                <div class="grid grid-cols-7 gap-1">
+                    {% for week in next_month_days %}
+                        {% for day in week %}
+                            {% if day.month != today.month %}
+                                <div onclick="toggleDay('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
+                                    {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md transform scale-105 {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
+                                ">
+                                    <span>{{ day.day }}</span>
+                                </div>
+                            {% else %}
+                                <div class="p-2 text-slate-200 text-sm"></div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
-        <!-- TAB HOY (CON AUTO-REFRESH) -->
-        <div id="tab-hoy" class="tab-content hidden">
-            <div class="bg-white shadow rounded-lg overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-slate-800">Agenda del día: {{ today|format_date }}</h2>
-                    <span id="today-count" class="bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full text-sm font-bold">{{ todays_appointments|length }} turnos</span>
+        <!-- COLUMNA DERECHA: Turnos y Link -->
+        <div class="lg:w-1/3 space-y-6">
+            
+            <!-- Link y QR -->
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                <h3 class="font-bold text-slate-800 mb-3">Tu Link de Reservas</h3>
+                <input type="text" readonly value="{{ request.host_url }}agenda/{{ current_user.slug }}" class="w-full bg-slate-100 text-center text-xs p-2 rounded mb-3 border" id="myLink">
+                <button onclick="copyLink()" class="bg-indigo-600 text-white text-sm px-4 py-2 rounded w-full font-bold hover:bg-indigo-700 mb-4">Copiar Link</button>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ request.host_url }}agenda/{{ current_user.slug }}" alt="QR" class="mx-auto rounded">
+            </div>
+
+            <!-- HOY -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800">Turnos de Hoy</h3>
+                    <span id="today-badge" class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded-full">{{ todays_appointments|length }}</span>
                 </div>
-                <ul id="list-today" class="divide-y divide-slate-200">
+                <ul id="list-today" class="space-y-3 text-sm max-h-40 overflow-y-auto">
                     {% for apt in todays_appointments %}
-                    <li class="p-4 flex justify-between items-center hover:bg-slate-50 transition">
-                        <div class="flex items-center gap-4">
-                            <span class="bg-indigo-600 text-white py-2 px-4 rounded font-mono font-bold text-lg">{{ apt.time.strftime('%H:%M') }}</span>
-                            <div>
-                                <p class="font-semibold text-slate-800">{{ apt.client_name }}</p>
-                                <p class="text-sm text-slate-500">{{ apt.client_phone }}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                             {% if apt.notes %}<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Nota</span>{% endif %}
-                            <form action="{{ url_for('dashboard.cancel_appointment', appointment_id=apt.id) }}" method="POST">
-                                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-bold uppercase">Cancelar</button>
-                            </form>
-                        </div>
+                    <li class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                        <span class="font-bold text-indigo-600">{{ apt.time.strftime('%H:%M') }}</span>
+                        <span class="font-medium">{{ apt.client_name }}</span>
                     </li>
+                    {% else %}
+                    <li class="text-slate-400 text-center py-4" id="empty-today">Sin turnos hoy.</li>
                     {% endfor %}
                 </ul>
-                <div id="empty-today" class="{% if todays_appointments %}hidden{% endif %} p-12 text-center">
-                    <p class="text-slate-400">No hay turnos reservados para hoy.</p>
-                </div>
             </div>
-        </div>
 
-        <!-- TAB PROXIMOS -->
-        <div id="tab-proxi" class="tab-content hidden">
-            <div class="bg-white shadow rounded-lg overflow-hidden">
-                <div class="px-6 py-4 border-b border-slate-200">
-                    <h2 class="text-lg font-bold text-slate-800">Próximos Turnos</h2>
-                </div>
-                <ul id="list-upcoming" class="divide-y divide-slate-200">
+            <!-- PROXIMOS -->
+            <div class="bg-white p-6 rounded-xl shadow-lg">
+                <h3 class="font-bold text-slate-800 mb-4">Próximos Turnos</h3>
+                <ul id="list-upcoming" class="space-y-3 text-sm max-h-60 overflow-y-auto">
                     {% for apt in upcoming_appointments %}
-                    <li class="p-4 flex justify-between items-center">
+                    <li class="flex justify-between items-center p-2 bg-slate-50 rounded">
                         <div>
-                            <p class="font-semibold text-slate-800">{{ apt.client_name }}</p>
-                            <p class="text-sm text-slate-500">{{ apt.date|format_date }} a las {{ apt.time.strftime('%H:%M') }}</p>
+                            <span class="font-bold text-slate-700">{{ apt.client_name }}</span>
+                            <span class="block text-xs text-slate-500">{{ apt.date|format_date }} - {{ apt.time.strftime('%H:%M') }}</span>
                         </div>
-                        <span class="text-sm text-slate-400">{{ apt.client_phone }}</span>
                     </li>
+                    {% else %}
+                    <li class="text-slate-400 text-center py-4" id="empty-upcoming">Sin turnos futuros.</li>
                     {% endfor %}
                 </ul>
-                <div id="empty-upcoming" class="{% if upcoming_appointments %}hidden{% endif %} p-12 text-center">
-                    <p class="text-slate-400">No hay turnos futuros.</p>
-                </div>
             </div>
         </div>
-
-        <!-- TAB LINK -->
-        <div id="tab-link" class="tab-content hidden">
-            <div class="grid md:grid-cols-2 gap-8">
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-lg font-bold mb-4 text-slate-800">Tu Link de Reserva</h3>
-                    <input type="text" readonly value="{{ request.host_url }}agenda/{{ current_user.slug }}" class="w-full bg-slate-100 border border-slate-200 rounded px-4 py-3 font-mono text-sm text-slate-600 mb-4" id="myLink">
-                    <button onclick="copyLink()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded hover:bg-indigo-700 transition">Copiar Link</button>
-                    <div class="mt-6 text-center">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ request.host_url }}agenda/{{ current_user.slug }}" alt="QR" class="mx-auto rounded shadow-md">
-                    </div>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow">
-                    <h3 class="text-lg font-bold mb-4 text-slate-800">Respaldo</h3>
-                    <a href="{{ url_for('dashboard.export_csv') }}" class="block w-full bg-green-600 text-white text-center font-bold py-3 rounded hover:bg-green-700 transition">Exportar CSV</a>
-                </div>
-            </div>
-        </div>
-    </main>
-
+    </div>
+    
     <!-- FOOTER -->
-    <footer class="bg-slate-800 text-slate-400 py-6 mt-12 border-t border-slate-700">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            <div class="flex flex-col md:flex-row justify-center items-center gap-2 md:gap-6 text-sm font-medium">
-                <span class="text-white font-bold">Guillermo Enrique Oyarzo</span>
-                <span class="hidden md:inline">|</span>
-                <span>Sistemas y Tecnologías</span>
-                <span class="hidden md:inline">|</span>
-                <a href="https://wa.me/5492804685815" target="_blank" class="hover:text-green-400 transition">+54 9 2804 68-5815</a>
-                <span class="hidden md:inline">|</span>
-                <a href="mailto:geopat001@gmail.com" class="hover:text-indigo-400 transition">geopat001@gmail.com</a>
-            </div>
+    <footer class="bg-slate-800 text-slate-400 py-4 mt-8 text-center text-xs">
+        <div class="flex justify-center items-center gap-4">
+            <span class="text-white font-bold">Guillermo E. Oyarzo</span> | <span>Sistemas y Tecnologías</span> | <a href="https://wa.me/5492804685815" class="hover:text-green-400">+54 9 2804 68-5815</a>
         </div>
     </footer>
 </div>
 
 <script>
-    // --- Lógica de Pestañas ---
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.tab-btn').forEach(el => {
-            el.classList.remove('text-indigo-600', 'border-b-2', 'border-indigo-600');
-            el.classList.add('text-slate-500');
+    // --- 1. Toggle Rápido de Días (Magia) ---
+    function toggleDay(dateStr) {
+        fetch('/dashboard/toggle-day/' + dateStr, {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success'){
+                const el = document.getElementById('day-' + dateStr);
+                if(data.action === 'added'){
+                    el.classList.remove('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
+                    el.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md', 'transform', 'scale-105');
+                } else {
+                    el.classList.add('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
+                    el.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md', 'transform', 'scale-105');
+                }
+            }
         });
-        document.getElementById('tab-' + tabId).classList.remove('hidden');
-        const btn = document.getElementById('btn-' + tabId);
-        btn.classList.remove('text-slate-500');
-        btn.classList.add('text-indigo-600', 'border-b-2', 'border-indigo-600');
     }
 
     function copyLink() {
@@ -193,58 +155,44 @@
         alert("Link copiado!");
     }
 
-    // --- AUTO-REFRESH LOGIC (MAGIA) ---
-    // Cada 10 segundos consulta al servidor si hay cambios
+    // --- 2. Auto-Refresh de Turnos (Cada 10 seg) ---
     setInterval(function() {
         fetch('/dashboard/live-data')
             .then(response => response.json())
             .then(data => {
-                // Actualizar badge del header
+                // Actualizar contador
                 document.getElementById('today-badge').innerText = data.todays.length;
-                document.getElementById('today-count').innerText = data.todays.length + " turnos";
-
-                // Actualizar lista de HOY
+                
+                // Actualizar lista HOY
                 const listToday = document.getElementById('list-today');
                 const emptyToday = document.getElementById('empty-today');
                 
                 if(data.todays.length > 0){
                     listToday.innerHTML = data.todays.map(apt => `
-                        <li class="p-4 flex justify-between items-center hover:bg-slate-50 transition">
-                            <div class="flex items-center gap-4">
-                                <span class="bg-indigo-600 text-white py-2 px-4 rounded font-mono font-bold text-lg">${apt.time}</span>
-                                <div>
-                                    <p class="font-semibold text-slate-800">${apt.name}</p>
-                                    <p class="text-sm text-slate-500">${apt.phone}</p>
-                                </div>
-                            </div>
+                        <li class="flex justify-between items-center p-2 bg-slate-50 rounded">
+                            <span class="font-bold text-indigo-600">${apt.time}</span>
+                            <span class="font-medium">${apt.name}</span>
                         </li>
                     `).join('');
-                    emptyToday.classList.add('hidden');
                 } else {
-                    listToday.innerHTML = '';
-                    emptyToday.classList.remove('hidden');
+                    listToday.innerHTML = '<li class="text-slate-400 text-center py-4">Sin turnos hoy.</li>';
                 }
 
-                // Actualizar lista de PRÓXIMOS
+                // Actualizar lista PROXIMOS
                 const listUpcoming = document.getElementById('list-upcoming');
-                const emptyUpcoming = document.getElementById('empty-upcoming');
-                
-                if(data.upcoming.length > 0){
+                 if(data.upcoming.length > 0){
                     listUpcoming.innerHTML = data.upcoming.map(apt => `
-                         <li class="p-4 flex justify-between items-center">
+                        <li class="flex justify-between items-center p-2 bg-slate-50 rounded">
                             <div>
-                                <p class="font-semibold text-slate-800">${apt.name}</p>
-                                <p class="text-sm text-slate-500">${apt.date} a las ${apt.time}</p>
+                                <span class="font-bold text-slate-700">${apt.name}</span>
+                                <span class="block text-xs text-slate-500">${apt.date} - ${apt.time}</span>
                             </div>
-                            <span class="text-sm text-slate-400">${apt.phone}</span>
                         </li>
                     `).join('');
-                    emptyUpcoming.classList.add('hidden');
                 } else {
-                    listUpcoming.innerHTML = '';
-                    emptyUpcoming.classList.remove('hidden');
+                    listUpcoming.innerHTML = '<li class="text-slate-400 text-center py-4">Sin turnos futuros.</li>';
                 }
             });
-    }, 10000); // 10000ms = 10 segundos
+    }, 10000);
 </script>
 {% endblock %}
