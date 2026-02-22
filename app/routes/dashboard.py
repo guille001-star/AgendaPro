@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
 from app import db
 from app.models.appointment import Appointment
@@ -7,7 +7,6 @@ from datetime import date, datetime, timedelta
 import calendar
 import csv
 from io import StringIO
-from flask import Response
 
 dashboard = Blueprint('dashboard', __name__)
 
@@ -25,11 +24,12 @@ def index():
         status='reservado'
     ).order_by(Appointment.time).all()
     
+    # CAMBIO: Limit(10) para ver más turnos
     upcoming_appointments = Appointment.query.filter(
         Appointment.professional_id == current_user.id,
         Appointment.status == 'reservado',
         Appointment.date > today
-    ).order_by(Appointment.date, Appointment.time).limit(4).all()
+    ).order_by(Appointment.date, Appointment.time).limit(10).all()
     
     enabled_days = AvailableDay.query.filter_by(
         professional_id=current_user.id
@@ -77,12 +77,13 @@ def toggle_day(date_str):
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# Endpoint de datos actualizado (Limit 10)
 @dashboard.route('/live-data')
 @login_required
 def live_data():
     today = get_local_date()
     todays = Appointment.query.filter_by(professional_id=current_user.id, date=today, status='reservado').order_by(Appointment.time).all()
-    upcoming = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status == 'reservado', Appointment.date > today).order_by(Appointment.date, Appointment.time).limit(4).all()
+    upcoming = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status == 'reservado', Appointment.date > today).order_by(Appointment.date, Appointment.time).limit(10).all()
     
     return jsonify({
         'todays': [{'id': a.id, 'time': a.time.strftime('%H:%M'), 'name': a.client_name, 'phone': a.client_phone} for a in todays],
