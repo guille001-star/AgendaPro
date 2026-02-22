@@ -12,20 +12,37 @@
         </div>
     </header>
 
+    <!-- DEBUG PANEL -->
+    <div class="bg-yellow-50 border-b border-yellow-200 p-4 text-xs text-yellow-800 print:hidden">
+        <div class="max-w-7xl mx-auto flex flex-wrap gap-4 items-center justify-between">
+            <div>
+                <span class="font-bold">MODO DEBUG:</span> 
+                Fecha Servidor: <span class="font-mono font-bold">{{ today }}</span> | 
+                Tu ID Usuario: <span class="font-mono font-bold">{{ debug_user_id }}</span> |
+                Total Registros en BD: <span class="font-mono font-bold text-lg">{{ debug_total }}</span>
+            </div>
+            <div class="w-full md:w-auto mt-2 md:mt-0">
+                <span class="font-bold">Últimos 5 guardados (sin importar fecha):</span>
+                <ul class="list-disc list-inside">
+                {% for a in debug_ultimos %}
+                    <li>{{ a.date }} - {{ a.time }} (User ID: {{ a.professional_id }}) - {{ a.client_name }}</li>
+                {% else %}
+                    <li class="text-red-500 font-bold">NO HAY NINGÚN REGISTRO EN LA BASE DE DATOS</li>
+                {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- END DEBUG -->
+
     <div class="flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto">
         
-        <!-- COLUMNA IZQUIERDA: Calendario Visual -->
+        <!-- COLUMNA IZQUIERDA: Calendario -->
         <div class="lg:w-2/3 space-y-6">
             <div class="bg-white rounded-xl shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        Calendario de Disponibilidad
-                    </h2>
-                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Clic para activar/desactivar</span>
+                    <h2 class="text-lg font-bold text-slate-800">Calendario</h2>
                 </div>
-                
-                <!-- MES ACTUAL -->
                 <h3 class="text-center font-bold text-slate-700 mb-2 uppercase tracking-wider">{{ today.strftime('%B %Y') }}</h3>
                 <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
@@ -35,36 +52,27 @@
                         {% for day in week %}
                             {% if day.month == today.month %}
                                 <div onclick="toggleDay('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
-                                    {% if day < today %} text-slate-300 cursor-not-allowed bg-slate-50 {% endif %}
+                                    {% if day < today %} text-slate-300 bg-slate-50 {% endif %}
                                     {% if day >= today %}
-                                        {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md transform scale-105 {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
+                                        {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
                                     {% endif %}
-                                ">
-                                    <span>{{ day.day }}</span>
-                                </div>
+                                "><span>{{ day.day }}</span></div>
                             {% else %}
-                                <div class="p-2 text-slate-200 text-sm"></div>
+                                <div class="p-2"></div>
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
                 </div>
-
-                <!-- MES SIGUIENTE -->
                 <h3 class="text-center font-bold text-slate-700 mb-2 mt-8 uppercase tracking-wider">{{ next_month_name }}</h3>
-                 <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
-                    <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
-                </div>
                 <div class="grid grid-cols-7 gap-1">
                     {% for week in next_month_days %}
                         {% for day in week %}
                             {% if day.month != today.month %}
                                 <div onclick="toggleDay('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
-                                    {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md transform scale-105 {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
-                                ">
-                                    <span>{{ day.day }}</span>
-                                </div>
+                                    {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
+                                "><span>{{ day.day }}</span></div>
                             {% else %}
-                                <div class="p-2 text-slate-200 text-sm"></div>
+                                <div class="p-2"></div>
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
@@ -72,18 +80,15 @@
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA: Turnos y Link -->
+        <!-- COLUMNA DERECHA -->
         <div class="lg:w-1/3 space-y-6">
-            
-            <!-- Link y QR -->
             <div class="bg-white p-6 rounded-xl shadow-lg text-center">
-                <h3 class="font-bold text-slate-800 mb-3">Tu Link de Reservas</h3>
+                <h3 class="font-bold text-slate-800 mb-3">Tu Link</h3>
                 <input type="text" readonly value="{{ request.host_url }}agenda/{{ current_user.slug }}" class="w-full bg-slate-100 text-center text-xs p-2 rounded mb-3 border" id="myLink">
                 <button onclick="copyLink()" class="bg-indigo-600 text-white text-sm px-4 py-2 rounded w-full font-bold hover:bg-indigo-700 mb-4">Copiar Link</button>
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ request.host_url }}agenda/{{ current_user.slug }}" alt="QR" class="mx-auto rounded">
             </div>
 
-            <!-- HOY -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-slate-800">Turnos de Hoy</h3>
@@ -96,12 +101,11 @@
                         <span class="font-medium">{{ apt.client_name }}</span>
                     </li>
                     {% else %}
-                    <li class="text-slate-400 text-center py-4" id="empty-today">Sin turnos hoy.</li>
+                    <li class="text-slate-400 text-center py-4">Sin turnos hoy.</li>
                     {% endfor %}
                 </ul>
             </div>
 
-            <!-- PROXIMOS -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h3 class="font-bold text-slate-800 mb-4">Próximos Turnos</h3>
                 <ul id="list-upcoming" class="space-y-3 text-sm max-h-60 overflow-y-auto">
@@ -113,23 +117,15 @@
                         </div>
                     </li>
                     {% else %}
-                    <li class="text-slate-400 text-center py-4" id="empty-upcoming">Sin turnos futuros.</li>
+                    <li class="text-slate-400 text-center py-4">Sin turnos futuros.</li>
                     {% endfor %}
                 </ul>
             </div>
         </div>
     </div>
-    
-    <!-- FOOTER -->
-    <footer class="bg-slate-800 text-slate-400 py-4 mt-8 text-center text-xs">
-        <div class="flex justify-center items-center gap-4">
-            <span class="text-white font-bold">Guillermo E. Oyarzo</span> | <span>Sistemas y Tecnologías</span> | <a href="https://wa.me/5492804685815" class="hover:text-green-400">+54 9 2804 68-5815</a>
-        </div>
-    </footer>
 </div>
 
 <script>
-    // --- 1. Toggle Rápido de Días (Magia) ---
     function toggleDay(dateStr) {
         fetch('/dashboard/toggle-day/' + dateStr, {method: 'POST'})
         .then(response => response.json())
@@ -138,30 +134,23 @@
                 const el = document.getElementById('day-' + dateStr);
                 if(data.action === 'added'){
                     el.classList.remove('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
-                    el.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md', 'transform', 'scale-105');
+                    el.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md');
                 } else {
                     el.classList.add('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
-                    el.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md', 'transform', 'scale-105');
+                    el.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md');
                 }
             }
         });
     }
-
     function copyLink() {
-        var copyText = document.getElementById("myLink");
-        copyText.select();
-        document.execCommand("copy");
-        alert("Link copiado!");
+        var copyText = document.getElementById("myLink"); copyText.select(); document.execCommand("copy"); alert("Copiado!");
     }
-
-    // --- 2. Auto-Refresh de Turnos (Cada 10 seg) ---
     setInterval(function() {
         fetch('/dashboard/live-data')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('today-badge').innerText = data.todays.length;
                 const listToday = document.getElementById('list-today');
-                
                 if(data.todays.length > 0){
                     listToday.innerHTML = data.todays.map(apt => `
                         <li class="flex justify-between items-center p-2 bg-slate-50 rounded">
@@ -169,23 +158,7 @@
                             <span class="font-medium">${apt.name}</span>
                         </li>
                     `).join('');
-                } else {
-                    listToday.innerHTML = '<li class="text-slate-400 text-center py-4">Sin turnos hoy.</li>';
-                }
-
-                const listUpcoming = document.getElementById('list-upcoming');
-                 if(data.upcoming.length > 0){
-                    listUpcoming.innerHTML = data.upcoming.map(apt => `
-                        <li class="flex justify-between items-center p-2 bg-slate-50 rounded">
-                            <div>
-                                <span class="font-bold text-slate-700">${apt.name}</span>
-                                <span class="block text-xs text-slate-500">${apt.date} - ${apt.time}</span>
-                            </div>
-                        </li>
-                    `).join('');
-                } else {
-                    listUpcoming.innerHTML = '<li class="text-slate-400 text-center py-4">Sin turnos futuros.</li>';
-                }
+                } else { listToday.innerHTML = '<li class="text-slate-400 text-center py-4">Sin turnos hoy.</li>'; }
             });
     }, 10000);
 </script>
