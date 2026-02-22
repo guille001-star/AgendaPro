@@ -2,170 +2,178 @@
 {% block content %}
 <div class="flex flex-col lg:flex-row min-h-[calc(100vh-64px)]">
     
-    <!-- Sidebar Oscuro -->
     <aside class="w-full lg:w-72 bg-slate-800 text-slate-200 p-6 border-r border-slate-700 flex-shrink-0 order-2 lg:order-1">
-        
-        <!-- Perfil / Link -->
         <div class="mb-8">
             <h3 class="text-xs font-bold uppercase text-slate-500 mb-2 tracking-widest">Acceso Público</h3>
             <div class="bg-slate-900 p-3 rounded border border-slate-700">
-                <p class="text-xs text-slate-400 mb-1">URL de Agenda:</p>
                 <input type="text" value="{{ public_url }}" readonly class="w-full bg-transparent text-indigo-400 font-mono text-xs focus:outline-none">
             </div>
         </div>
 
-        <!-- Configuración -->
         <div class="mb-8">
             <h3 class="text-xs font-bold uppercase text-slate-500 mb-4 tracking-widest">Parámetros</h3>
             <form action="{{ url_for('dashboard.settings') }}" method="POST" class="space-y-3">
                 <label class="block text-sm text-slate-300">Duración del Turno</label>
                 <div class="flex items-center gap-2">
-                    <input type="number" name="duration" value="{{ current_user.appointment_duration }}" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-center font-bold focus:border-indigo-500 focus:ring-0 focus:outline-none">
+                    <input type="number" name="duration" value="{{ current_user.appointment_duration }}" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white text-center font-bold">
                     <span class="text-slate-400 text-xs">MIN</span>
                 </div>
                 <button type="submit" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-2 rounded text-xs font-bold uppercase tracking-wide transition">Actualizar</button>
             </form>
         </div>
-
-        <!-- Gestión de Horarios -->
-        <div>
-            <h3 class="text-xs font-bold uppercase text-slate-500 mb-4 tracking-widest">Horarios de Atención</h3>
-            <form action="{{ url_for('dashboard.add_schedule') }}" method="POST" class="space-y-3 mb-4">
-                <select name="day" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
-                    <option value="0">Lunes</option><option value="1">Martes</option>
-                    <option value="2">Miércoles</option><option value="3">Jueves</option>
-                    <option value="4">Viernes</option><option value="5">Sábado</option>
-                    <option value="6">Domingo</option>
-                </select>
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="time" name="start" class="bg-slate-900 border border-slate-700 text-white rounded px-2 py-2 text-xs focus:outline-none focus:border-indigo-500">
-                    <input type="time" name="end" class="bg-slate-900 border border-slate-700 text-white rounded px-2 py-2 text-xs focus:outline-none focus:border-indigo-500">
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded text-xs font-bold uppercase tracking-wide transition shadow-lg shadow-indigo-900/20">+ Agregar Bloque</button>
-            </form>
-
-            <div class="space-y-2">
-                {% for h in horarios %}
-                <div class="flex justify-between items-center bg-slate-900/50 px-3 py-2 rounded text-xs group hover:bg-slate-900 transition">
-                    <span class="text-slate-300 font-medium">
-                        {% if h.day_of_week == 0 %}LUN{% elif h.day_of_week == 1 %}MAR{% elif h.day_of_week == 2 %}MIÉ{% elif h.day_of_week == 3 %}JUE{% elif h.day_of_week == 4 %}VIE{% elif h.day_of_week == 5 %}SÁB{% else %}DOM{% endif %} 
-                        <span class="text-slate-500 ml-1">{{ h.start_time }} - {{ h.end_time }}</span>
-                    </span>
-                    <a href="{{ url_for('dashboard.delete_schedule', id=h.id) }}" class="text-slate-600 group-hover:text-red-500 font-bold transition">&times;</a>
-                </div>
-                {% endfor %}
-            </div>
+        
+        <div class="bg-slate-900/50 p-4 rounded border border-slate-700 mt-6">
+            <h4 class="text-xs font-bold text-indigo-400 mb-2 uppercase">Instrucciones</h4>
+            <p class="text-xs text-slate-400 leading-relaxed">Haz clic en un día para definir tus horarios de atención. Haz clic nuevamente en un día activo para editarlo o quitarlo.</p>
         </div>
     </aside>
 
-    <!-- Contenido Principal -->
     <div class="flex-1 p-6 lg:p-8 order-1 lg:order-2 overflow-auto">
         
-        <!-- Header -->
-        <div class="mb-8 border-b border-slate-200 pb-4">
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Gestión de Turnos</h1>
-            <p class="text-slate-500 text-sm mt-1">Vista general y control de agenda.</p>
-        </div>
-
-        <!-- GRID DE ESTADISTICAS -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-white p-4 rounded shadow-sm border border-slate-200">
-                <p class="text-xs text-slate-500 uppercase font-bold tracking-wide">Hoy</p>
-                <p class="text-3xl font-bold text-slate-800 mt-1">{{ turnos_hoy|length }}</p>
+        <div class="mb-8 border-b border-slate-200 pb-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Mi Disponibilidad</h1>
+                <p class="text-slate-500 text-sm mt-1">{{ month_name }} {{ year }}</p>
             </div>
-            <div class="bg-white p-4 rounded shadow-sm border border-slate-200">
-                <p class="text-xs text-slate-500 uppercase font-bold tracking-wide">Próximos</p>
-                <p class="text-3xl font-bold text-slate-800 mt-1">{{ proximos|length }}</p>
-            </div>
-            <div class="bg-white p-4 rounded shadow-sm border border-slate-200">
-                <p class="text-xs text-slate-500 uppercase font-bold tracking-wide">Historial</p>
-                <p class="text-3xl font-bold text-slate-500 mt-1">{{ historial|length }}</p>
+            <div class="flex gap-2">
+                <a href="{{ url_for('dashboard.index', month=month-1 if month > 1 else 12, year=year if month > 1 else year-1) }}" class="px-3 py-1 bg-white border rounded text-sm hover:bg-slate-50">&larr;</a>
+                <a href="{{ url_for('dashboard.index', month=month+1 if month < 12 else 1, year=year if month < 12 else year+1) }}" class="px-3 py-1 bg-white border rounded text-sm hover:bg-slate-50">&rarr;</a>
             </div>
         </div>
 
-        <!-- SECCIÓN HOY -->
-        <div class="mb-8">
-            <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <span class="w-2 h-2 bg-indigo-600 rounded-full"></span> Turnos de Hoy
-            </h2>
-            {% if turnos_hoy %}
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {% for t in turnos_hoy %}
-                <div class="bg-white rounded shadow-sm border-l-4 border-indigo-600 p-5 hover:shadow-md transition">
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="bg-slate-100 text-slate-600 text-xs font-mono px-2 py-1 rounded">{{ t.time }}</span>
-                        <span class="text-xs text-slate-400">Confirmado</span>
-                    </div>
-                    <h3 class="text-slate-900 font-bold text-lg">{{ t.client_name }}</h3>
-                    <p class="text-slate-500 text-sm mt-1">{{ t.client_phone }}</p>
-                </div>
+        <div class="bg-white rounded-lg shadow-sm border p-4 mb-8">
+            <div class="grid grid-cols-7 gap-1 text-center mb-2 border-b pb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase">Lun</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Mar</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Mié</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Jue</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Vie</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Sáb</span>
+                <span class="text-xs font-bold text-slate-400 uppercase">Dom</span>
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+                {% for day in calendar_data %}
+                    {% if day.type == 'empty' %}
+                        <div class="h-20 bg-slate-50 rounded"></div>
+                    {% else %}
+                        <div class="h-20 border rounded p-1 cursor-pointer transition-all duration-150
+                                    {% if day.is_enabled %}bg-green-50 border-green-400 ring-1 ring-green-400{% endif %}
+                                    {% if day.is_past %}opacity-50 bg-slate-50 border-slate-200 cursor-not-allowed{% endif %}
+                                    {% if not day.is_enabled and not day.is_past %}hover:border-indigo-300 hover:bg-slate-50 border-slate-200{% endif %}"
+                             {% if not day.is_past %} 
+                                onclick="openModal('{{ day.date }}', {% if day.start %}'{{ day.start.strftime('%H:%M') }}'{% else %}'09:00'{% endif %}, {% if day.end %}'{{ day.end.strftime('%H:%M') }}'{% else %}'18:00'{% endif %}, {{ 'true' if day.is_enabled else 'false' }})" 
+                             {% endif %}>
+                            <div class="flex justify-between items-start h-full">
+                                <span class="text-sm font-bold text-slate-700 {% if day.is_enabled %}text-green-700{% endif %}">{{ day.day }}</span>
+                                {% if day.is_enabled %}
+                                    <div class="text-right mt-1">
+                                        <span class="block text-[9px] text-green-600 font-mono font-bold">{{ day.start.strftime('%H:%M') }}</span>
+                                        <span class="block text-[9px] text-green-600 font-mono font-bold">{{ day.end.strftime('%H:%M') }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             </div>
-            {% else %}
-            <div class="bg-slate-50 border border-dashed border-slate-200 rounded p-6 text-center text-slate-400 text-sm">
-                No hay turnos programados para hoy.
-            </div>
-            {% endif %}
         </div>
 
-        <!-- SECCIÓN PRÓXIMOS -->
-        <div class="mb-8">
-            <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <span class="w-2 h-2 bg-slate-400 rounded-full"></span> Próximos Turnos
-            </h2>
-            {% if proximos %}
-            <div class="bg-white rounded shadow-sm border overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">Fecha</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">Hora</th>
-                            <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">Cliente</th>
-                            <!-- OCULTAR EN MÓVIL -->
-                            <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide hidden md:table-cell">Contacto</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        {% for t in proximos %}
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-800">{{ t.date|format_date }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-600 font-mono">{{ t.time }}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-800">{{ t.client_name }}</td>
-                            <!-- OCULTAR EN MÓVIL -->
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-500 hidden md:table-cell">{{ t.client_phone }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-4 rounded shadow-sm border">
+                <h3 class="font-bold text-slate-800 mb-3 text-sm uppercase">Turnos Hoy ({{ turnos_hoy|length }})</h3>
+                {% if turnos_hoy %}
+                    <ul class="space-y-2">
+                    {% for t in turnos_hoy %}
+                        <li class="text-sm border-l-2 border-indigo-500 pl-2"><span class="font-mono">{{ t.time }}</span> - {{ t.client_name }}</li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-sm text-slate-400">Sin turnos.</p>
+                {% endif %}
             </div>
-            {% else %}
-            <div class="bg-slate-50 border border-dashed border-slate-200 rounded p-6 text-center text-slate-400 text-sm">
-                Sin turnos futuros.
+             <div class="bg-white p-4 rounded shadow-sm border">
+                <h3 class="font-bold text-slate-800 mb-3 text-sm uppercase">Próximos</h3>
+                 <ul class="space-y-2">
+                    {% for t in proximos %}
+                        <li class="text-sm border-l-2 border-slate-300 pl-2"><span class="font-mono text-xs">{{ t.date|format_date }}</span> - {{ t.client_name }}</li>
+                    {% endfor %}
+                    </ul>
             </div>
-            {% endif %}
         </div>
-
-        <!-- HISTORIAL -->
-        <details class="group">
-            <summary class="cursor-pointer text-slate-500 hover:text-slate-700 text-sm font-medium flex items-center gap-2 select-none">
-                <svg class="w-4 h-4 transform group-open:rotate-90 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                Ver Historial Antiguo
-            </summary>
-            <div class="mt-4 bg-slate-50 rounded border border-slate-200 overflow-hidden">
-                 <table class="min-w-full text-sm">
-                    <tbody class="divide-y divide-slate-200">
-                        {% for t in historial %}
-                        <tr>
-                            <td class="px-4 py-2 text-slate-600">{{ t.date|format_date }}</td>
-                            <td class="px-4 py-2 text-slate-400 font-mono">{{ t.time }}</td>
-                            <td class="px-4 py-2 text-slate-800 font-medium">{{ t.client_name }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                 </table>
-            </div>
-        </details>
-
     </div>
 </div>
+
+<!-- MODAL -->
+<div id="day-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-2xl w-80 overflow-hidden transform transition-all">
+        <div class="bg-slate-900 p-4 text-white">
+            <h3 class="font-bold" id="modal-title">Configurar Día</h3>
+        </div>
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-gray-500 text-center">Define tu horario de atención.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Desde</label>
+                    <input type="time" id="modal-start" class="w-full border p-2 rounded text-center" value="09:00">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Hasta</label>
+                    <input type="time" id="modal-end" class="w-full border p-2 rounded text-center" value="18:00">
+                </div>
+            </div>
+            <input type="hidden" id="modal-date">
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeModal()" class="flex-1 py-2 border rounded text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                <button onclick="deleteDay()" id="btn-delete" class="flex-1 py-2 bg-red-100 text-red-600 rounded text-sm font-medium hover:bg-red-200 hidden">Quitar</button>
+                <button onclick="saveDay()" class="flex-1 py-2 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(dateStr, startTime, endTime, isEdit) {
+        const modal = document.getElementById('day-modal');
+        document.getElementById('modal-date').value = dateStr;
+        document.getElementById('modal-start').value = startTime;
+        document.getElementById('modal-end').value = endTime;
+        
+        const btnDelete = document.getElementById('btn-delete');
+        if(isEdit) { btnDelete.classList.remove('hidden'); } 
+        else { btnDelete.classList.add('hidden'); }
+        
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('day-modal').classList.add('hidden'); }
+
+    function saveDay() {
+        const date = document.getElementById('modal-date').value;
+        const start = document.getElementById('modal-start').value;
+        const end = document.getElementById('modal-end').value;
+
+        fetch('/dashboard/save_day', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({date: date, start_time: start, end_time: end})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success'){ closeModal(); location.reload(); }
+        });
+    }
+
+    function deleteDay() {
+        const date = document.getElementById('modal-date').value;
+        fetch('/dashboard/delete_day', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({date: date})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success'){ closeModal(); location.reload(); }
+        });
+    }
+</script>
 {% endblock %}

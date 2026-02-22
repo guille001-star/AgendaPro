@@ -1,9 +1,10 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import current_user
 from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
-from datetime import datetime, timedelta
+from app.models.available_day import AvailableDay
+from datetime import datetime, timedelta, date
 
 public = Blueprint('public', __name__)
 
@@ -13,6 +14,40 @@ def index():
         return redirect(url_for('dashboard.index'))
     return redirect(url_for('auth.login'))
 
+# Endpoint para obtener horarios via AJAX
+@public.route('/get_slots/<slug>/<date_str>')
+def get_slots(slug, date_str):
+    professional = User.query.filter_by(slug=slug).first_or_404()
+    selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    
+    avail = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
+    if not avail:
+        return jsonify({'status': 'error', 'message': 'Día no disponible'})
+    
+    booked = Appointment.query.filter_by(professional_id=professional.id, date=selected_date).all()
+    booked_times = [t.time for t in booked]
+    
+    slots = []
+    current_t = datetime.combine(date.today(), avail.start_time)
+    end_t = datetime.combine(date.today(), avail.end_time)
+    duration = timedelta(minutes=professional.appointment_duration)
+    
+    while current_t.time() < end_t.time():
+        slot_time = current_t.time()
+        is_booked = slot_time in booked_times
+        
+        is_past = False
+        if selected_date == date.today():
+            if slot_time < datetime.now().time():
+                is_past = True
+
+        if not is_booked and not is_past:
+            slots.append(slot_time.strftime('%H:%M'))
+        
+        current_t += duration
+        
+    return jsonify({'slots': slots})
+
 @public.route('/agenda/<slug>', methods=['GET', 'POST'])
 def agenda(slug):
     professional = User.query.filter(db.func.lower(User.slug) == slug.lower()).first_or_404()
@@ -21,12 +56,12 @@ def agenda(slug):
         client_name = request.form.get('name')
         client_phone = request.form.get('phone')
         date_str = request.form.get('date')
-        time_str = request.form.get('time')
+        time_str = request.form.get('time_slot')
         
-        print(f"--- NUEVA RESERVA RECIBIDA ---") # Log en consola
-        print(f"Cliente: {client_name}, Tel: {client_phone}")
-        print(f"Fecha: {date_str}, Hora: {time_str}")
-        
+        if not time_str:
+            flash('Por favor selecciona un horario.')
+            return redirect(url_for('public.agenda', slug=slug))
+
         try:
             date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             time_obj = datetime.strptime(time_str, '%H:%M').time()
@@ -40,14 +75,14 @@ def agenda(slug):
             )
             db.session.add(new_appointment)
             db.session.commit()
-            print("Guardado en BD correctamente.")
             flash('¡Turno reservado con éxito!')
         except Exception as e:
-            print(f"ERROR al guardar: {e}")
-            flash('Hubo un error al reservar.')
+            flash('Error al reservar.')
             
-        return redirect(url_for('public.agenda', slug=professional.slug))
+        return redirect(url_for('public.agenda', slug=slug))
         
-    today = datetime.today().date()
-    available_days = [today + timedelta(days=i) for i in range(7)]
-    return render_template('public/agenda.html', professional=professional, days=available_days)
+    today = date.today()
+    enabled_dates = AvailableDay.query.filter_by(professional_id=professional.id)\
+        .filter(AvailableDay.date >= today).order_by(AvailableDay.date).limit(30).all()
+    
+    return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)

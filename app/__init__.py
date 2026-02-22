@@ -17,10 +17,8 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
 
-    # Filtro para fechas
     app.jinja_env.filters['format_date'] = format_date
 
-    # Inyectar variable 'now' global para los templates
     @app.context_processor
     def inject_now():
         return {'now': datetime.utcnow()}
@@ -32,5 +30,10 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(dash_bp, url_prefix='/dashboard')
     app.register_blueprint(public_bp)
+
+    # Importar modelos para que SQLAlchemy los reconozca
+    from app.models.user import User
+    from app.models.appointment import Appointment
+    from app.models.available_day import AvailableDay
 
     return app
