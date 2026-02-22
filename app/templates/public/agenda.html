@@ -1,7 +1,7 @@
 ﻿{% extends "base.html" %}
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-slate-200 p-4">
-    <div class="w-full max-w-md bg-white shadow-2xl overflow-hidden">
+<div class="min-h-screen flex flex-col items-center justify-center bg-slate-200 p-4">
+    <div class="w-full max-w-md bg-white shadow-2xl overflow-hidden mb-4">
         <div class="bg-slate-900 p-10 text-center border-b-4 border-indigo-600">
             <span class="block text-xs font-bold text-indigo-400 uppercase tracking-[0.2em] mb-2">Reserva Profesional</span>
             <h1 class="text-3xl font-bold text-white tracking-tight">{{ professional.name }}</h1>
@@ -44,7 +44,15 @@
             </form>
         </div>
     </div>
+
+    <!-- FOOTER PUBLICO -->
+    <div class="w-full max-w-md text-center text-xs text-slate-500 mt-auto py-4">
+        <p class="font-bold text-slate-600">2026 Copyright - Guillermo E. Oyarzo</p>
+        <p>Sistemas y Tecnologías - Soluciones para Empresa</p>
+        <a href="https://wa.me/5492804685815" target="_blank" class="text-green-600 hover:underline">WhatsApp: +54 9 2804 68-5815</a>
+    </div>
 </div>
+
 <script>
 document.getElementById('date-select').addEventListener('change', function() {
     const date = this.value;
