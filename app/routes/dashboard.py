@@ -1,137 +1,128 @@
-﻿import io
-
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
-from datetime import datetime, timedelta, date
-import calendar
-import csv
+from datetime import date, datetime, timedelta
+from sqlalchemy import or_
 
 dashboard = Blueprint('dashboard', __name__)
 
 @dashboard.route('/')
 @login_required
 def index():
-    public_url = url_for('public.agenda', slug=current_user.slug, _external=True)
+    today = date.today()
     
-    year = request.args.get('year', datetime.now().year, type=int)
-    month = request.args.get('month', datetime.now().month, type=int)
+    # Turnos de HOY
+    todays_appointments = Appointment.query.filter_by(
+        professional_id=current_user.id, 
+        date=today, 
+        status='reservado'
+    ).order_by(Appointment.time).all()
     
-    cal = calendar.Calendar()
-    month_days = cal.itermonthdays2(year, month)
-    enabled_dates = AvailableDay.query.filter_by(professional_id=current_user.id).all()
-    enabled_map = {d.date: d for d in enabled_dates}
+    # Próximos turnos (LIMITADO A 4)
+    upcoming_appointments = Appointment.query.filter(
+        Appointment.professional_id == current_user.id,
+        Appointment.status == 'reservado',
+        Appointment.date > today
+    ).order_by(Appointment.date, Appointment.time).limit(4).all()
     
-    calendar_data = []
-    for day, weekday in month_days:
-        if day == 0:
-            calendar_data.append({'type': 'empty'})
-        else:
-            current_date = date(year, month, day)
-            is_enabled = current_date in enabled_map
-            is_past = current_date < date.today()
-            calendar_data.append({
-                'type': 'day', 'day': day, 'date': current_date,
-                'is_enabled': is_enabled, 'is_past': is_past,
-                'start': enabled_map.get(current_date).start_time if is_enabled else None,
-                'end': enabled_map.get(current_date).end_time if is_enabled else None
-            })
-
-    hoy = date.today()
-    turnos_hoy = Appointment.query.filter_by(professional_id=current_user.id, status='reservado')\
-        .filter(Appointment.date == hoy).order_by(Appointment.time).all()
-    proximos = Appointment.query.filter_by(professional_id=current_user.id, status='reservado')\
-        .filter(Appointment.date > hoy).order_by(Appointment.date, Appointment.time).limit(10).all()
+    # Días disponibles futuros
+    enabled_days = AvailableDay.query.filter_by(
+        professional_id=current_user.id
+    ).filter(AvailableDay.date >= today).order_by(AvailableDay.date).limit(30).all()
     
-    month_name = datetime(year, month, 1).strftime("%B").capitalize()
-
+    # Calendario completo (para la pestaña)
+    calendar_days = AvailableDay.query.filter_by(
+        professional_id=current_user.id
+    ).filter(AvailableDay.date >= today - timedelta(days=30)).order_by(AvailableDay.date).all()
+    
     return render_template('dashboard/index.html', 
-                           turnos_hoy=turnos_hoy, proximos=proximos,
-                           public_url=public_url,
-                           calendar_data=calendar_data, 
-                           year=year, month=month, month_name=month_name)
+                           todays_appointments=todays_appointments,
+                           upcoming_appointments=upcoming_appointments,
+                           enabled_days=enabled_days,
+                           calendar_days=calendar_days,
+                           today=today)
 
-@dashboard.route('/settings', methods=['POST'])
+@dashboard.route('/available-day', methods=['POST'])
 @login_required
-def settings():
-    duration = request.form.get('duration')
-    if duration:
-        current_user.appointment_duration = int(duration)
-        db.session.commit()
-        flash('Duración actualizada.')
+def add_available_day():
+    date_str = request.form.get('date')
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        existing = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_obj).first()
+        if existing:
+            flash('Este día ya está habilitado.', 'error')
+        else:
+            new_day = AvailableDay(professional_id=current_user.id, date=date_obj)
+            db.session.add(new_day)
+            db.session.commit()
+    except Exception as e:
+        db.session.rollback()
     return redirect(url_for('dashboard.index'))
 
-# NUEVO: Exportar CSV
-@dashboard.route('/export')
+@dashboard.route('/set-hours/<int:day_id>', methods=['POST'])
+@login_required
+def set_hours(day_id):
+    day = AvailableDay.query.get_or_404(day_id)
+    if day.professional_id != current_user.id:
+        return redirect(url_for('dashboard.index'))
+    
+    start_str = request.form.get('start_time')
+    end_str = request.form.get('end_time')
+    
+    if start_str and end_str:
+        day.start_time = datetime.strptime(start_str, '%H:%M').time()
+        day.end_time = datetime.strptime(end_str, '%H:%M').time()
+        db.session.commit()
+        
+    return redirect(url_for('dashboard.index'))
+
+@dashboard.route('/toggle-availability/<int:day_id>', methods=['POST'])
+@login_required
+def toggle_availability(day_id):
+    day = AvailableDay.query.get_or_404(day_id)
+    if day.professional_id == current_user.id:
+        db.session.delete(day)
+        db.session.commit()
+    return redirect(url_for('dashboard.index'))
+
+@dashboard.route('/cancel-appointment/<int:appointment_id>', methods=['POST'])
+@login_required
+def cancel_appointment(appointment_id):
+    appointment = Appointment.query.get_or_404(appointment_id)
+    if appointment.professional_id == current_user.id:
+        appointment.status = 'cancelado'
+        db.session.commit()
+    return redirect(url_for('dashboard.index'))
+
+@dashboard.route('/export-csv')
 @login_required
 def export_csv():
-    turnos = Appointment.query.filter_by(professional_id=current_user.id).order_by(Appointment.date.desc()).all()
-    
-    def generate():
-        data = [['Fecha', 'Hora', 'Cliente', 'Telefono', 'Notas', 'Estado']]
-        for t in turnos:
-            data.append([t.date, t.time, t.client_name, t.client_phone, t.notes or '', t.status])
-        
-        si = io.StringIO()
-        cw = csv.writer(si)
-        cw.writerows(data)
-        return si.getvalue()
+    import csv
+    from io import StringIO
+    from flask import Response
 
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Fecha', 'Hora', 'Paciente', 'Teléfono', 'Email', 'Notas', 'Estado'])
+
+    appointments = Appointment.query.filter_by(professional_id=current_user.id).order_by(Appointment.date.desc()).all()
+    
+    for apt in appointments:
+        writer.writerow([
+            apt.date.strftime('%d/%m/%Y'),
+            apt.time.strftime('%H:%M'),
+            apt.client_name,
+            apt.client_phone,
+            apt.client_email or '',
+            apt.notes or '',
+            apt.status
+        ])
+
+    output.seek(0)
     return Response(
-        generate(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=turnos.csv"}
+        output,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment;filename=agenda.csv'}
     )
-
-# NUEVO: Cancelar Turno
-@dashboard.route('/cancel/<int:id>')
-@login_required
-def cancel_appointment(id):
-    turno = Appointment.query.get_or_404(id)
-    if turno.professional_id == current_user.id:
-        turno.status = 'cancelado'
-        db.session.commit()
-        flash('Turno cancelado. El horario quedó libre para nuevos pacientes.')
-    return redirect(url_for('dashboard.index'))
-
-@dashboard.route('/save_day', methods=['POST'])
-@login_required
-def save_day():
-    data = request.get_json()
-    date_obj = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
-    start_obj = datetime.strptime(data.get('start_time'), '%H:%M').time()
-    end_obj = datetime.strptime(data.get('end_time'), '%H:%M').time()
-    
-    avail = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_obj).first()
-    if avail:
-        avail.start_time = start_obj
-        avail.end_time = end_obj
-    else:
-        new_avail = AvailableDay(professional_id=current_user.id, date=date_obj, start_time=start_obj, end_time=end_obj)
-        db.session.add(new_avail)
-    db.session.commit()
-    return jsonify({'status': 'success'})
-
-@dashboard.route('/delete_day', methods=['POST'])
-@login_required
-def delete_day():
-    date_obj = datetime.strptime(request.get_json().get('date'), '%Y-%m-%d').date()
-    avail = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_obj).first()
-    if avail:
-        db.session.delete(avail)
-        db.session.commit()
-    return jsonify({'status': 'success'})
-
-@dashboard.route('/change_password', methods=['POST'])
-@login_required
-def change_password():
-    new_pass = request.form.get('new_password')
-    if new_pass and len(new_pass) >= 4:
-        current_user.set_password(new_pass)
-        db.session.commit()
-        flash('Contraseña actualizada correctamente.')
-    else:
-        flash('La contraseña debe tener al menos 4 caracteres.')
-    return redirect(url_for('dashboard.index'))
