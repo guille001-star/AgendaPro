@@ -11,33 +11,34 @@ from flask import Response
 
 dashboard = Blueprint('dashboard', __name__)
 
+# Función auxiliar para obtener la fecha de Argentina (UTC-3)
+def get_local_date():
+    # Hora actual UTC menos 3 horas para Argentina
+    return (datetime.utcnow() - timedelta(hours=3)).date()
+
 @dashboard.route('/')
 @login_required
 def index():
-    today = date.today()
+    today = get_local_date() # Usamos fecha local
     
-    # Turnos de HOY
     todays_appointments = Appointment.query.filter_by(
         professional_id=current_user.id, 
         date=today, 
         status='reservado'
     ).order_by(Appointment.time).all()
     
-    # Próximos turnos
     upcoming_appointments = Appointment.query.filter(
         Appointment.professional_id == current_user.id,
         Appointment.status == 'reservado',
         Appointment.date > today
     ).order_by(Appointment.date, Appointment.time).limit(4).all()
     
-    # Días disponibles
     enabled_days = AvailableDay.query.filter_by(
         professional_id=current_user.id
     ).filter(AvailableDay.date >= today).all()
     
     enabled_dates = [d.date for d in enabled_days]
     
-    # Calendarios
     cal = calendar.Calendar(firstweekday=6) 
     current_month_days = cal.monthdatescalendar(today.year, today.month)
     
@@ -45,7 +46,6 @@ def index():
     next_year = today.year if today.month < 12 else today.year + 1
     next_month_days = cal.monthdatescalendar(next_year, next_month)
     
-    # Calculamos el nombre del mes siguiente AQUI (solución)
     next_month_date = today.replace(day=28) + timedelta(days=10)
     next_month_name = next_month_date.strftime('%B %Y')
     
@@ -87,7 +87,8 @@ def toggle_day(date_str):
 @dashboard.route('/live-data')
 @login_required
 def live_data():
-    today = date.today()
+    today = get_local_date() # Usamos fecha local
+    
     todays = Appointment.query.filter_by(
         professional_id=current_user.id, 
         date=today, 
