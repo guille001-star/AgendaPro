@@ -6,8 +6,17 @@ from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import datetime, timedelta, date
+from threading import Thread
 
 public = Blueprint('public', __name__)
+
+# Función auxiliar para enviar email en un hilo separado
+def send_async_email(app, msg):
+    with app.app_context():
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f"Error enviando email en background: {e}")
 
 @public.route('/')
 def index():
@@ -56,7 +65,7 @@ def agenda(slug):
     
     if request.method == 'POST':
         client_name = request.form.get('name')
-        client_email = request.form.get('email') # NUEVO
+        client_email = request.form.get('email')
         client_phone = request.form.get('phone')
         date_str = request.form.get('date')
         time_str = request.form.get('time_slot')
@@ -82,15 +91,14 @@ def agenda(slug):
             db.session.add(new_appointment)
             db.session.commit()
             
-            # --- ENVÍO DE EMAIL ---
-            if client_email and current_app.config['MAIL_USERNAME']:
-                try:
-                    msg = Message(
-                        subject=f"Confirmación de Turno con {professional.name}",
-                        sender=current_app.config['MAIL_USERNAME'],
-                        recipients=[client_email]
-                    )
-                    msg.body = f"""Hola {client_name}!
+            # --- ENVÍO DE EMAIL EN BACKGROUND ---
+            if client_email and current_app.config.get('MAIL_USERNAME'):
+                msg = Message(
+                    subject=f"Confirmación de Turno con {professional.name}",
+                    sender=current_app.config['MAIL_USERNAME'],
+                    recipients=[client_email]
+                )
+                msg.body = f"""Hola {client_name}!
 
 Tu turno ha sido reservado con éxito.
 
@@ -101,13 +109,11 @@ Hora: {time_obj.strftime('%H:%M')}
 
 Gracias por usar AgendaPro.
 """
-                    mail.send(msg)
-                    flash('¡Turno reservado! Revisa tu correo para la confirmación.')
-                except Exception as e:
-                    print(f"Error enviando email: {e}")
-                    flash('Turno reservado, pero hubo un error al enviar el email.')
-            else:
-                flash('¡Turno reservado con éxito!')
+                # Enviar en un hilo separado para no bloquear al usuario
+                thr = Thread(target=send_async_email, args=[current_app._get_current_object(), msg])
+                thr.start()
+            
+            flash('¡Turno reservado con éxito! Revisa tu correo.')
                 
         except Exception as e:
             db.session.rollback()
