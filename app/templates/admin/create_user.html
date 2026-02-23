@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg bg-white rounded-lg shadow-xl p-8">
+        <h2 class="text-2xl font-bold text-slate-800 mb-6 text-center">Registrar Nuevo Profesional</h2>
+        
+        <form action="{{ url_for('admin.new_user') }}" method="POST">
+            <div class="mb-4">
+                <label class="block text-slate-700 text-sm font-bold mb-2">Nombre Completo</label>
+                <input type="text" name="name" required class="shadow appearance-none border rounded w-full py-3 px-3 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Dr. Juan Pérez">
+            </div>
+            <div class="mb-4">
+                <label class="block text-slate-700 text-sm font-bold mb-2">Email</label>
+                <input type="email" name="email" required class="shadow appearance-none border rounded w-full py-3 px-3 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="juan@ejemplo.com">
+            </div>
+            <div class="mb-6">
+                <label class="block text-slate-700 text-sm font-bold mb-2">Contraseña Inicial</label>
+                <input type="text" name="password" value="cliente123" required class="shadow appearance-none border rounded w-full py-3 px-3 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <p class="text-xs text-slate-500 mt-1">El cliente deberá cambiarla al entrar.</p>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <a href="{{ url_for('admin.index') }}" class="text-slate-500 hover:text-slate-700 text-sm">Cancelar</a>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded transition focus:outline-none focus:shadow-outline">
+                    Crear Profesional
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
