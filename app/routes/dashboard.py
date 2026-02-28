@@ -84,8 +84,7 @@ def toggle_day(date_str):
 @login_required
 def set_hours_by_date(date_str):
     day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
-    if not day:
-        return jsonify({'status': 'error', 'message': 'Día no habilitado'}), 404
+    if not day: return jsonify({'status': 'error', 'message': 'Día no habilitado'}), 404
     
     data = request.get_json()
     start_str = data.get('start_time')
@@ -97,9 +96,39 @@ def set_hours_by_date(date_str):
             day.end_time = datetime.strptime(end_str, '%H:%M').time()
             db.session.commit()
             return jsonify({'status': 'success'})
-        except Exception as e:
-            return jsonify({'status': 'error', 'message': str(e)}), 400
+        except Exception as e: return jsonify({'status': 'error', 'message': str(e)}), 400
     return jsonify({'status': 'error', 'message': 'Datos incompletos'}), 400
+
+@dashboard.route('/get-day-config/<date_str>')
+@login_required
+def get_day_config(date_str):
+    day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
+    if day:
+        return jsonify({
+            'status': 'found',
+            'start_time': day.start_time.strftime('%H:%M') if day.start_time else '09:00',
+            'end_time': day.end_time.strftime('%H:%M') if day.end_time else '18:00'
+        })
+    return jsonify({'status': 'not_found'})
+
+# --- CONFIGURACIÓN DE PAGOS ---
+@dashboard.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        price = request.form.get('price', 0, type=float)
+        token = request.form.get('mp_token')
+        key = request.form.get('mp_key')
+        
+        current_user.appointment_price = price
+        if token: current_user.mp_access_token = token
+        if key: current_user.mp_public_key = key
+        
+        db.session.commit()
+        flash('Configuración de cobros guardada.', 'success')
+        return redirect(url_for('dashboard.settings'))
+        
+    return render_template('dashboard/settings.html')
 
 @dashboard.route('/live-data')
 @login_required
