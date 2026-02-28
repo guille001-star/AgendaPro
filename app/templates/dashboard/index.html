@@ -1,33 +1,26 @@
 ﻿{% extends "base.html" %}
 {% block content %}
 <div class="bg-slate-100 min-h-screen pb-10">
-    <header class="bg-slate-900 text-white py-4 px-6 flex justify-between items-center sticky top-0 z-50 border-b-4 border-indigo-600">
+    <header class="bg-slate-900 text-white py-4 px-6 flex justify-between items-center sticky top-0 z-40 border-b-4 border-indigo-600">
         <div>
             <p class="text-xs text-slate-400 uppercase tracking-wider">Panel de Control</p>
             <h1 class="text-xl font-bold">{{ current_user.name }}</h1>
         </div>
         <div class="flex items-center gap-2 flex-wrap justify-end">
-            <!-- Botón Super Admin (Solo para ID 1) -->
-            {% if current_user.id == 1 %}
-                <a href="{{ url_for('admin.index') }}" class="text-xs bg-yellow-500 text-black font-bold px-3 py-2 rounded hover:bg-yellow-400 transition">
-                    ⚡ Super Admin
-                </a>
-            {% endif %}
-            
             <a href="{{ url_for('auth.change_password') }}" class="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">Cambiar Clave</a>
-            <a href="{{ url_for('dashboard.export_csv') }}" class="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">Exportar CSV</a>
+            <a href="{{ url_for('dashboard.export_csv') }}" class="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">Exportar</a>
             <a href="{{ url_for('auth.logout') }}" class="text-xs bg-red-600 px-3 py-2 rounded hover:bg-red-700">Salir</a>
         </div>
     </header>
 
     <div class="flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto">
         
-        <!-- COLUMNA IZQUIERDA: Calendario -->
+        <!-- CALENDARIO -->
         <div class="lg:w-2/3 space-y-6">
             <div class="bg-white rounded-xl shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-lg font-bold text-slate-800">Calendario de Disponibilidad</h2>
-                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Clic para activar/desactivar</span>
+                    <h2 class="text-lg font-bold text-slate-800">Calendario</h2>
+                    <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">Clic para activar/configurar</span>
                 </div>
                 
                 <h3 class="text-center font-bold text-slate-700 mb-2 uppercase tracking-wider">{{ today.strftime('%B %Y') }}</h3>
@@ -38,7 +31,7 @@
                     {% for week in current_month_days %}
                         {% for day in week %}
                             {% if day.month == today.month %}
-                                <div onclick="toggleDay('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
+                                <div onclick="handleDayClick('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
                                     {% if day < today %} text-slate-300 cursor-not-allowed bg-slate-50 {% endif %}
                                     {% if day >= today %}
                                         {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md transform scale-105 {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
@@ -50,7 +43,7 @@
                         {% endfor %}
                     {% endfor %}
                 </div>
-
+                
                 <h3 class="text-center font-bold text-slate-700 mb-2 mt-8 uppercase tracking-wider">{{ next_month_name }}</h3>
                  <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
                     <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
@@ -59,7 +52,7 @@
                     {% for week in next_month_days %}
                         {% for day in week %}
                             {% if day.month != today.month %}
-                                <div onclick="toggleDay('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
+                                <div onclick="handleDayClick('{{ day }}')" id="day-{{ day }}" class="cursor-pointer p-2 rounded text-center transition-all duration-200 text-sm font-medium
                                     {% if day in enabled_dates %} bg-green-500 text-white hover:bg-green-600 shadow-md transform scale-105 {% else %} bg-slate-100 text-slate-700 hover:bg-slate-200 {% endif %}
                                 "><span>{{ day.day }}</span></div>
                             {% else %}
@@ -71,8 +64,8 @@
             </div>
         </div>
 
+        <!-- TURNOS -->
         <div class="lg:w-1/3 space-y-6">
-            <!-- HOY -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-slate-800">Turnos de Hoy</h3>
@@ -90,7 +83,6 @@
                 </ul>
             </div>
 
-            <!-- PROXIMOS -->
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <h3 class="font-bold text-slate-800 mb-4">Próximos Turnos</h3>
                 <ul id="list-upcoming" class="space-y-3 text-sm max-h-60 overflow-y-auto">
@@ -107,7 +99,6 @@
                 </ul>
             </div>
 
-            <!-- LINK -->
             <div class="bg-white p-6 rounded-xl shadow-lg text-center">
                 <h3 class="font-bold text-slate-800 mb-3">Tu Link y QR</h3>
                 <input type="text" readonly value="{{ request.host_url }}agenda/{{ current_user.slug }}" class="w-full bg-slate-100 text-center text-xs p-2 rounded mb-3 border" id="myLink">
@@ -116,20 +107,42 @@
             </div>
         </div>
     </div>
-    
-    <!-- FOOTER -->
-    <footer class="bg-slate-900 text-white py-4 mt-8 text-center text-xs border-t border-slate-700">
-        <div class="max-w-4xl mx-auto px-4 space-y-1">
-            <p class="font-bold text-sm">2026 Copyright - Guillermo Enrique Oyarzo</p>
-            <p class="text-slate-400 text-xs">Sistemas y Tecnologías - Soluciones para Empresa</p>
-            <div class="flex justify-center items-center gap-2 pt-1">
-                <a href="https://wa.me/5492804685815" target="_blank" class="text-green-400 hover:text-green-300 font-medium transition">WhatsApp: +54 9 2804 68-5815</a>
+</div>
+
+<!-- MODAL DE HORARIOS -->
+<div id="hours-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+        <h3 class="text-lg font-bold mb-4 text-slate-800">Configurar Horario</h3>
+        <p class="text-sm text-slate-600 mb-4">Fecha: <span id="modal-date" class="font-bold"></span></p>
+        <form id="hours-form" class="space-y-3">
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Hora Inicio</label>
+                <input type="time" id="start-time" name="start_time" value="09:00" class="w-full border border-slate-300 p-2 rounded">
             </div>
-        </div>
-    </footer>
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Hora Fin</label>
+                <input type="time" id="end-time" name="end_time" value="18:00" class="w-full border border-slate-300 p-2 rounded">
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Guardar</button>
+                <button type="button" onclick="hideHoursModal()" class="flex-1 bg-slate-200 py-2 rounded hover:bg-slate-300">Cancelar</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script>
+    let currentEditingDate = null;
+
+    function handleDayClick(dateStr) {
+        const el = document.getElementById('day-' + dateStr);
+        if(el.classList.contains('bg-green-500')){
+            showHoursModal(dateStr);
+        } else {
+            toggleDay(dateStr);
+        }
+    }
+
     function toggleDay(dateStr) {
         fetch('/dashboard/toggle-day/' + dateStr, {method: 'POST'})
         .then(response => response.json())
@@ -139,6 +152,7 @@
                 if(data.action === 'added'){
                     el.classList.remove('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
                     el.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md', 'transform', 'scale-105');
+                    showHoursModal(dateStr);
                 } else {
                     el.classList.add('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
                     el.classList.remove('bg-green-500', 'text-white', 'hover:bg-green-600', 'shadow-md', 'transform', 'scale-105');
@@ -146,9 +160,47 @@
             }
         });
     }
+
+    function showHoursModal(dateStr) {
+        currentEditingDate = dateStr;
+        document.getElementById('modal-date').innerText = dateStr;
+        document.getElementById('start-time').value = '09:00';
+        document.getElementById('end-time').value = '18:00';
+        const modal = document.getElementById('hours-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function hideHoursModal() {
+        document.getElementById('hours-modal').classList.add('hidden');
+        document.getElementById('hours-modal').classList.remove('flex');
+    }
+
+    document.getElementById('hours-form').addEventListener('submit', function(e){
+        e.preventDefault();
+        fetch('/dashboard/set-hours-by-date/' + currentEditingDate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                start_time: document.getElementById('start-time').value, 
+                end_time: document.getElementById('end-time').value 
+            })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if(res.status === 'success'){
+                alert('Horarios guardados');
+                hideHoursModal();
+            } else {
+                alert('Error: ' + res.message);
+            }
+        });
+    });
+
     function copyLink() {
         var copyText = document.getElementById("myLink"); copyText.select(); document.execCommand("copy"); alert("Copiado!");
     }
+    
     setInterval(function() {
         fetch('/dashboard/live-data?v=' + new Date().getTime())
             .then(response => response.json())

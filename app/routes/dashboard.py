@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.models.appointment import Appointment
@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 import calendar
 import csv
 from io import StringIO
+from flask import Response
 
 dashboard = Blueprint('dashboard', __name__)
 
@@ -24,7 +25,6 @@ def index():
         status='reservado'
     ).order_by(Appointment.time).all()
     
-    # CAMBIO: Limit(10) para ver más turnos
     upcoming_appointments = Appointment.query.filter(
         Appointment.professional_id == current_user.id,
         Appointment.status == 'reservado',
@@ -66,9 +66,12 @@ def toggle_day(date_str):
             db.session.delete(existing)
             action = 'removed'
         else:
-            new_day = AvailableDay(professional_id=current_user.id, date=date_obj,
+            new_day = AvailableDay(
+                professional_id=current_user.id, 
+                date=date_obj,
                 start_time=datetime.strptime('09:00', '%H:%M').time(),
-                end_time=datetime.strptime('18:00', '%H:%M').time())
+                end_time=datetime.strptime('18:00', '%H:%M').time()
+            )
             db.session.add(new_day)
             action = 'added'
         db.session.commit()
@@ -77,13 +80,33 @@ def toggle_day(date_str):
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Endpoint de datos actualizado (Limit 10)
+@dashboard.route('/set-hours-by-date/<date_str>', methods=['POST'])
+@login_required
+def set_hours_by_date(date_str):
+    day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
+    if not day:
+        return jsonify({'status': 'error', 'message': 'Día no habilitado'}), 404
+    
+    data = request.get_json()
+    start_str = data.get('start_time')
+    end_str = data.get('end_time')
+    
+    if start_str and end_str:
+        try:
+            day.start_time = datetime.strptime(start_str, '%H:%M').time()
+            day.end_time = datetime.strptime(end_str, '%H:%M').time()
+            db.session.commit()
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            return jsonify({'status': 'error', 'message': str(e)}), 400
+    return jsonify({'status': 'error', 'message': 'Datos incompletos'}), 400
+
 @dashboard.route('/live-data')
 @login_required
 def live_data():
     today = get_local_date()
     todays = Appointment.query.filter_by(professional_id=current_user.id, date=today, status='reservado').order_by(Appointment.time).all()
-    upcoming = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status == 'reservado', Appointment.date > today).order_by(Appointment.date, Appointment.time).limit(10).all()
+    upcoming = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status == 'reservado', Appointment.date > today).order_by(Appointment.date, Appointment.time).limit(4).all()
     
     return jsonify({
         'todays': [{'id': a.id, 'time': a.time.strftime('%H:%M'), 'name': a.client_name, 'phone': a.client_phone} for a in todays],

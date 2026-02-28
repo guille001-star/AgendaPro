@@ -1,43 +1,49 @@
 ﻿from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
-from config import Config, format_date
-from datetime import datetime
+from app.config import Config
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from sqlalchemy import text
 
 db = SQLAlchemy()
+migrate = Migrate()
 login_manager = LoginManager()
 mail = Mail()
-login_manager.login_view = 'auth.login'
-login_manager.login_message = 'Por favor, inicia sesión para acceder a esta página.'
-login_manager.login_message_category = 'error'
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
-    mail.init_app(app) # Iniciar Mail
-
-    app.jinja_env.filters['format_date'] = format_date
-
-    @app.context_processor
-    def inject_now():
-        return {'now': datetime.utcnow()}
-
-    from app.routes.auth import auth as auth_bp
-    from app.routes.dashboard import dashboard as dash_bp
-    from app.routes.public import public as public_bp
-    from app.routes.admin import admin as admin_bp
-
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(dash_bp, url_prefix='/dashboard')
-    app.register_blueprint(public_bp)
-    app.register_blueprint(admin_bp)
+    mail.init_app(app)
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message_category = 'info'
 
     from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
+    
+    # --- MIGRACIÓN AUTOMÁTICA PARA POSTGRESQL (RAILWAY) ---
+    with app.app_context():
+        try:
+            # Intentar agregar columnas si no existen (PostgreSQL)
+            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
+            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
+            db.session.commit()
+            print(">>> Verificación de DB PostgreSQL OK.")
+        except Exception as e:
+            db.session.rollback()
+            print(f">>> Info DB (puede ser normal si ya existen columnas): {e}")
+    # ------------------------------------------------------
+
+    from app.routes.auth import auth
+    from app.routes.dashboard import dashboard
+    from app.routes.public import public
+    app.register_blueprint(auth)
+    app.register_blueprint(dashboard)
+    app.register_blueprint(public)
 
     return app
