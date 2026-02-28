@@ -84,7 +84,7 @@ def toggle_day(date_str):
 @login_required
 def set_hours_by_date(date_str):
     day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
-    if not day: return jsonify({'status': 'error', 'message': 'Día no habilitado'}), 404
+    if not day: return jsonify({'status': 'error', 'message': 'Dia no habilitado'}), 404
     
     data = request.get_json()
     start_str = data.get('start_time')
@@ -125,7 +125,7 @@ def settings():
         if key: current_user.mp_public_key = key
         
         db.session.commit()
-        flash('Configuración de cobros guardada.', 'success')
+        flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
         
     return render_template('dashboard/settings.html')

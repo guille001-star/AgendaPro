@@ -1,0 +1,38 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto p-6">
+    <div class="bg-white rounded-xl shadow-lg p-8">
+        <h1 class="text-2xl font-bold text-slate-800 mb-6">💰 Configuración de Cobros</h1>
+        <p class="text-slate-600 mb-6 text-sm">
+            Configura tus datos de Mercado Pago para recibir pagos por adelantado.
+            Obtén tus credenciales en <a href="https://www.mercadopago.com.ar/developers/panel" target="_blank" class="text-indigo-600 underline">Mercado Pago Developers</a>.
+        </p>
+        <form method="POST" action="{{ url_for('dashboard.settings') }}" class="space-y-6">
+            <div class="border-b pb-6">
+                <label class="block text-sm font-bold text-slate-700 mb-2">Precio de la Consulta (ARS)</label>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-500">$</span>
+                    <input type="number" name="price" step="0.01" value="{{ current_user.appointment_price or '' }}" 
+                           class="flex-1 border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Ej: 5000.00">
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Dejar en 0 si el agendamiento es gratuito.</p>
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Access Token</label>
+                <input type="text" name="mp_token" value="{{ current_user.mp_access_token or '' }}" 
+                       class="w-full border border-slate-300 p-3 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500" 
+                       placeholder="APP_USR-xxxx... (Producción o Prueba)">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Public Key</label>
+                <input type="text" name="mp_key" value="{{ current_user.mp_public_key or '' }}" 
+                       class="w-full border border-slate-300 p-3 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500" 
+                       placeholder="APP_USR-xxxx...">
+            </div>
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition">
+                Guardar Configuración
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
