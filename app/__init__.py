@@ -10,7 +10,7 @@ login_manager = LoginManager()
 mail = Mail()
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
     app.config.from_object(config_class)
 
     db.init_app(app)
@@ -31,10 +31,11 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
-            # Intentamos agregar la columna si no existe
-            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS appointment_price FLOAT DEFAULT 0'))
+            # Solo verificamos columnas de HORARIOS (que SÍ existen)
+            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
+            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Migración de Precio verificada.")
+            print(">>> DB verificada (Horarios OK).")
         except Exception as e:
             db.session.rollback()
             print(f">>> Info DB: {e}")

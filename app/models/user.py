@@ -8,10 +8,9 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
     slug = db.Column(db.String(100), unique=True)
-    # Dejamos los campos de precio para no romper la BD, pero no los usamos en la UI
-    appointment_price = db.Column(db.Float, default=0.0)
-    mp_access_token = db.Column(db.String(200))
-    mp_public_key = db.Column(db.String(200))
+    
+    # ELIMINADOS: appointment_price, mp_access_token, mp_public_key
+    # Usamos solo los campos que SABEMOS que existen en tu BD.
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
