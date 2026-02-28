@@ -1,24 +1,9 @@
-﻿<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgendaPro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>body { font-family: 'Segoe UI', sans-serif; }</style>
-</head>
+﻿<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AgendaPro</title><script src="https://cdn.tailwindcss.com"></script><style>body { font-family: 'Segoe UI', sans-serif; }</style></head>
 <body class="bg-slate-50">
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        <div class="fixed top-0 right-0 m-4 z-50">
-            {% for category, message in messages %}
-            <div class="bg-{{ 'red' if category == 'danger' else 'green' }}-100 border-l-4 border-{{ 'red' if category == 'danger' else 'green' }}-500 text-{{ 'red' if category == 'danger' else 'green' }}-700 p-2 rounded shadow mb-2" role="alert">
-                <p class="font-bold">{{ message }}</p>
-            </div>
-            {% endfor %}
-        </div>
+        <div class="fixed top-0 right-0 m-4 z-50">{% for category, message in messages %}<div class="bg-{{ 'red' if category == 'danger' else 'green' }}-100 border-l-4 border-{{ 'red' if category == 'danger' else 'green' }}-500 text-{{ 'red' if category == 'danger' else 'green' }}-700 p-2 rounded shadow mb-2"><p>{{ message }}</p></div>{% endfor %}</div>
         {% endif %}
     {% endwith %}
     {% block content %}{% endblock %}
-</body>
-</html>
+</body></html>

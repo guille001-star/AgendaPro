@@ -8,6 +8,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
     slug = db.Column(db.String(100), unique=True)
+    appointment_price = db.Column(db.Float, default=0.0) 
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
