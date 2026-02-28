@@ -1,0 +1,12 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="text-center p-10">
+    <h1 class="text-2xl font-bold mb-4">Procesando...</h1>
+    <p>Estamos verificando su pago.</p>
+    <div class="animate-spin text-4xl mt-4">🔄</div>
+</div>
+<script>
+    // Redirigir al inicio después de 5 segundos
+    setTimeout(() => { window.location.href = "/"; }, 5000);
+</script>
+{% endblock %}
