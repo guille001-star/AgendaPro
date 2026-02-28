@@ -1,16 +1,24 @@
 ﻿<!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Agenda{% endblock %}</title>
+    <title>AgendaPro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
-    </style>
+    <style>body { font-family: 'Segoe UI', sans-serif; }</style>
 </head>
-<body class="bg-slate-100 h-full">
+<body class="bg-slate-50">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="fixed top-0 right-0 m-4 z-50">
+            {% for category, message in messages %}
+            <div class="bg-{{ 'red' if category == 'danger' else 'green' }}-100 border-l-4 border-{{ 'red' if category == 'danger' else 'green' }}-500 text-{{ 'red' if category == 'danger' else 'green' }}-700 p-2 rounded shadow mb-2" role="alert">
+                <p class="font-bold">{{ message }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
     {% block content %}{% endblock %}
 </body>
 </html>
