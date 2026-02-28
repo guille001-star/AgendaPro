@@ -31,11 +31,10 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
-            # Solo verificamos columnas de HORARIOS (que SÍ existen)
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> DB verificada (Horarios OK).")
+            print(">>> Sistema iniciado correctamente.")
         except Exception as e:
             db.session.rollback()
             print(f">>> Info DB: {e}")

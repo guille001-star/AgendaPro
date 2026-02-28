@@ -1,5 +1,4 @@
 ﻿from app import db
-
 class Appointment(db.Model):
     __tablename__ = 'appointments'
     id = db.Column(db.Integer, primary_key=True)
@@ -11,8 +10,4 @@ class Appointment(db.Model):
     time = db.Column(db.Time, nullable=False)
     status = db.Column(db.String(20), default='reservado')
     notes = db.Column(db.Text)
-    
-    # ELIMINADOS: payment_id, etc.
-
-    def __repr__(self):
-        return f'<Appointment {self.date} {self.time}>'
+    def __repr__(self): return f'<Appointment {self.date} {self.time}>'
