@@ -22,8 +22,8 @@ def agenda(slug):
 
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
-    # CAMBIO CLAVE: Ahora busca en 'site/agenda.html'
-    return render_template('site/agenda.html', professional=professional, enabled_dates=enabled_days)
+    # APUNTA A LA CARPETA PUBLIC
+    return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_days)
 
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
