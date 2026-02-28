@@ -1,7 +1,8 @@
 ﻿from flask import Flask
 from flask_login import LoginManager
 from flask_mail import Mail
-from app.config import Config
+# CORRECCIÓN: Importar 'config' desde la raíz, no 'app.config'
+from config import Config 
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import text
@@ -22,21 +23,23 @@ def create_app(config_class=Config):
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
 
+    # Importar modelos
     from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
     
-    # --- MIGRACIÓN AUTOMÁTICA PARA POSTGRESQL (RAILWAY) ---
+    # --- MIGRACIÓN AUTOMÁTICA PARA POSTGRESQL ---
     with app.app_context():
         try:
-            # Intentar agregar columnas si no existen (PostgreSQL)
+            # Verificar si existen las columnas start_time y end_time
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Verificación de DB PostgreSQL OK.")
+            print(">>> Migración de horarios verificada/realizada.")
         except Exception as e:
             db.session.rollback()
-            print(f">>> Info DB (puede ser normal si ya existen columnas): {e}")
+            # Si falla, puede ser porque ya existen o error de permisos, pero la app no debe caerse
+            print(f">>> Info DB: {e}")
     # ------------------------------------------------------
 
     from app.routes.auth import auth
