@@ -19,13 +19,13 @@ def create_app(config_class=Config):
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
 
-    # --- REGISTRO DE FILTRO JINJA (SOLUCIÓN) ---
+    # --- FILTRO JINJA ---
     @app.template_filter('format_date')
     def format_date(value):
         if value:
             return value.strftime('%d/%m/%Y')
         return ""
-    # -----------------------------------------
+    # --------------------
 
     from app.models.user import User
     from app.models.appointment import Appointment
@@ -38,17 +38,19 @@ def create_app(config_class=Config):
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Sistema iniciado y migración OK.")
+            print(">>> Sistema iniciado correctamente.")
         except Exception as e:
             db.session.rollback()
             print(f">>> Nota DB: {e}")
-    # -------------------------
+    # ------------------------
 
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
     from app.routes.public import public
-    app.register_blueprint(auth)
-    app.register_blueprint(dashboard)
-    app.register_blueprint(public)
+    
+    # REGISTRO CON PREFIJOS CORRECTOS
+    app.register_blueprint(auth, url_prefix='/auth')
+    app.register_blueprint(dashboard, url_prefix='/dashboard')
+    app.register_blueprint(public) # Public no necesita prefijo, sus rutas son específicas (/agenda, etc)
 
     return app
