@@ -16,6 +16,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)
+    
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
 
@@ -23,18 +24,18 @@ def create_app(config_class=Config):
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
     
-    # --- MIGRACIÓN AUTOMÁTICA (Sin Flask-Migrate) ---
+    # --- MIGRACIÓN AUTOMÁTICA (Usando solo SQLAlchemy) ---
     with app.app_context():
         try:
-            # Intentamos agregar las columnas. Si ya existen, PostgreSQL no hace nada con IF NOT EXISTS.
+            # Agregar columnas si no existen (PostgreSQL)
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Verificación de columnas de horario OK.")
+            print(">>> Migración de horarios OK.")
         except Exception as e:
             db.session.rollback()
-            print(f">>> Info DB (ignorar si ya existe): {e}")
-    # ----------------------------------------------
+            print(f">>> Info DB: {e}")
+    # -----------------------------------------------------
 
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
