@@ -16,26 +16,26 @@ def create_app(config_class=Config):
     db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)
-    
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
 
+    # Importar modelos para que SQLAlchemy los conozca
     from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
     
-    # --- MIGRACIÓN AUTOMÁTICA (Usando solo SQLAlchemy) ---
+    # --- MIGRACIÓN AUTOMÁTICA ---
     with app.app_context():
         try:
-            # Agregar columnas si no existen (PostgreSQL)
+            db.create_all() # Crea tablas si no existen (seguro)
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Migración de horarios OK.")
+            print(">>> Sistema iniciado correctamente.")
         except Exception as e:
             db.session.rollback()
-            print(f">>> Info DB: {e}")
-    # -----------------------------------------------------
+            print(f">>> Nota DB: {e}")
+    # ----------------------------
 
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
