@@ -111,24 +111,12 @@ def get_day_config(date_str):
         })
     return jsonify({'status': 'not_found'})
 
-# --- CONFIGURACIÓN DE PAGOS ---
-@dashboard.route('/settings', methods=['GET', 'POST'])
+# Settings route placeholder (para evitar 404 si quedó el botón)
+@dashboard.route('/settings')
 @login_required
 def settings():
-    if request.method == 'POST':
-        price = request.form.get('price', 0, type=float)
-        token = request.form.get('mp_token')
-        key = request.form.get('mp_key')
-        
-        current_user.appointment_price = price
-        if token: current_user.mp_access_token = token
-        if key: current_user.mp_public_key = key
-        
-        db.session.commit()
-        flash('Configuracion guardada.', 'success')
-        return redirect(url_for('dashboard.settings'))
-        
-    return render_template('dashboard/settings.html')
+    flash('Función de cobros no disponible en esta versión.', 'info')
+    return redirect(url_for('dashboard.index'))
 
 @dashboard.route('/live-data')
 @login_required
@@ -136,9 +124,8 @@ def live_data():
     today = get_local_date()
     todays = Appointment.query.filter_by(professional_id=current_user.id, date=today, status='reservado').order_by(Appointment.time).all()
     upcoming = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status == 'reservado', Appointment.date > today).order_by(Appointment.date, Appointment.time).limit(4).all()
-    
     return jsonify({
-        'todays': [{'id': a.id, 'time': a.time.strftime('%H:%M'), 'name': a.client_name, 'phone': a.client_phone} for a in todays],
+        'todays': [{'id': a.id, 'time': a.time.strftime('%H:%M'), 'name': a.client_name} for a in todays],
         'upcoming': [{'id': a.id, 'date': a.date.strftime('%d/%m'), 'time': a.time.strftime('%H:%M'), 'name': a.client_name} for a in upcoming]
     })
 

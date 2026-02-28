@@ -5,33 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agenda - {{ professional.name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; }
-        .slot-btn { transition: all 0.2s; }
-        .slot-btn:hover { transform: scale(1.05); }
-        .slot-btn.selected { background-color: #4f46e5; color: white; }
-    </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
-    <!-- Header -->
     <div class="bg-white shadow p-6 text-center">
         <h1 class="text-2xl font-bold text-gray-800">{{ professional.name }}</h1>
-        <p class="text-gray-500 text-sm mt-1">Seleccione día y hora para su turno.</p>
-        {% if professional.appointment_price and professional.appointment_price > 0 %}
-        <p class="mt-2 text-indigo-600 font-bold text-lg">Precio: ${{ "%.2f"|format(professional.appointment_price) }}</p>
-        {% endif %}
+        <p class="text-gray-500 text-sm mt-1">Seleccione día y hora.</p>
     </div>
 
     <div class="max-w-4xl mx-auto p-6 grid md:grid-cols-2 gap-6">
-        
-        <!-- Columna Izquierda: Calendario -->
         <div class="bg-white p-6 rounded-xl shadow-lg">
             <h2 class="font-bold text-gray-700 mb-4">1. Elija una fecha</h2>
-            <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-gray-400 mb-2">
-                <div>Dom</div><div>Lun</div><div>Mar</div><div>Mie</div><div>Jue</div><div>Vie</div><div>Sab</div>
-            </div>
             <div class="grid grid-cols-7 gap-1" id="calendar-container">
-                <!-- Los días se cargarán aquí -->
                 {% for day in enabled_dates %}
                 <div onclick="selectDate('{{ day }}')" 
                      class="cursor-pointer p-2 rounded text-center text-sm font-medium bg-gray-100 hover:bg-indigo-100"
@@ -41,15 +25,13 @@
                 {% endfor %}
             </div>
             
-            <form id="booking-form" method="POST" action="{{ url_for('public.iniciar_pago', slug=professional.slug) }}" class="hidden mt-6">
+            <form id="booking-form" method="POST" class="hidden mt-6">
                 <input type="hidden" name="date" id="input-date">
                 <input type="hidden" name="time_slot" id="input-time">
                 
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Horario:</label>
-                    <div id="slots-container" class="grid grid-cols-4 gap-2">
-                        <!-- Se cargan dinámicamente -->
-                    </div>
+                    <div id="slots-container" class="grid grid-cols-4 gap-2"></div>
                 </div>
 
                 <div class="border-t pt-4">
@@ -57,34 +39,21 @@
                     <input type="text" name="name" placeholder="Nombre completo" required class="w-full border p-2 rounded mb-2">
                     <input type="email" name="email" placeholder="Email" required class="w-full border p-2 rounded mb-2">
                     <input type="tel" name="phone" placeholder="Teléfono" required class="w-full border p-2 rounded mb-4">
-                    
-                    {% if professional.appointment_price > 0 %}
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded text-lg">
-                            Pagar y Reservar
-                        </button>
-                    {% else %}
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded text-lg">
-                            Reservar (Sin cargo)
-                        </button>
-                    {% endif %}
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded text-lg">
+                        Reservar
+                    </button>
                 </div>
             </form>
         </div>
-
-        <!-- Columna Derecha: Info -->
         <div class="bg-white p-6 rounded-xl shadow-lg text-center flex flex-col justify-center">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ request.host_url }}agenda/{{ professional.slug }}" alt="QR" class="mx-auto rounded mb-4">
-            <p class="text-gray-500 text-sm">Escanea para agendar desde tu celular</p>
         </div>
     </div>
 
     <script>
         function selectDate(dateStr) {
-            // Resaltar día seleccionado
             document.querySelectorAll('#calendar-container div').forEach(el => el.classList.remove('bg-indigo-500', 'text-white'));
             document.getElementById('day-' + dateStr).classList.add('bg-indigo-500', 'text-white');
-            
-            // Mostrar formulario y cargar horarios
             document.getElementById('input-date').value = dateStr;
             document.getElementById('booking-form').classList.remove('hidden');
             
@@ -98,7 +67,7 @@
                         const btn = document.createElement('button');
                         btn.type = 'button';
                         btn.innerText = slot;
-                        btn.className = 'slot-btn p-2 border rounded hover:bg-gray-100';
+                        btn.className = 'p-2 border rounded hover:bg-gray-100';
                         btn.onclick = () => selectSlot(slot, btn);
                         container.appendChild(btn);
                     });
@@ -109,8 +78,8 @@
         }
         
         function selectSlot(time, btn) {
-            document.querySelectorAll('.slot-btn').forEach(el => el.classList.remove('selected'));
-            btn.classList.add('selected');
+            document.querySelectorAll('#slots-container button').forEach(el => el.classList.remove('bg-indigo-500', 'text-white'));
+            btn.classList.add('bg-indigo-500', 'text-white');
             document.getElementById('input-time').value = time;
         }
     </script>
