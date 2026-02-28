@@ -19,23 +19,30 @@ def create_app(config_class=Config):
     login_manager.login_view = 'auth.login'
     login_manager.login_message_category = 'info'
 
-    # Importar modelos para que SQLAlchemy los conozca
+    # --- REGISTRO DE FILTRO JINJA (SOLUCIÓN) ---
+    @app.template_filter('format_date')
+    def format_date(value):
+        if value:
+            return value.strftime('%d/%m/%Y')
+        return ""
+    # -----------------------------------------
+
     from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
     
-    # --- MIGRACIÓN AUTOMÁTICA ---
+    # --- MIGRACIÓN SEGURA ---
     with app.app_context():
         try:
-            db.create_all() # Crea tablas si no existen (seguro)
+            db.create_all()
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Sistema iniciado correctamente.")
+            print(">>> Sistema iniciado y migración OK.")
         except Exception as e:
             db.session.rollback()
             print(f">>> Nota DB: {e}")
-    # ----------------------------
+    # -------------------------
 
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
