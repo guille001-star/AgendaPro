@@ -22,7 +22,7 @@ def agenda(slug):
 
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
-    # CAMBIO: Sin subcarpeta, solo 'agenda.html'
+    # APUNTA A RAÍZ: agenda.html
     return render_template('agenda.html', professional=professional, enabled_dates=enabled_days)
 
 @public.route('/agenda/get-slots/<slug>/<date_str>')
