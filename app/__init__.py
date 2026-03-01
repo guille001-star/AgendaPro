@@ -28,13 +28,14 @@ def create_app(config_class=Config):
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
     
+    # MIGRACIÓN AUTOMÁTICA POSTGRESQL
     with app.app_context():
         try:
             db.create_all()
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.commit()
-            print(">>> Sistema iniciado correctamente.")
+            print(">>> Sistema iniciado y migrado OK.")
         except Exception as e:
             db.session.rollback()
             print(f">>> Info DB: {e}")
