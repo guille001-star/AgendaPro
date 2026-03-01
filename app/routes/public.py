@@ -7,23 +7,29 @@ from datetime import datetime, date, time as dt_time, timedelta
 
 public = Blueprint('public', __name__)
 
-HTML_AGENDA = """
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Agenda</title><script src="https://cdn.tailwindcss.com"></script></head>
+TPL_AGENDA = """
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Agenda</title><script src="https://cdn.tailwindcss.com"></script></head>
 <body class="bg-gray-50 min-h-screen">
 <div class="bg-white shadow p-6 text-center max-w-4xl mx-auto"><h1 class="text-2xl font-bold text-gray-800">{{ professional.name }}</h1><p class="text-gray-500 text-sm mt-1">Seleccione dia y hora.</p></div>
 <div class="max-w-4xl mx-auto p-6 grid md:grid-cols-2 gap-6">
 <div class="bg-white p-6 rounded-xl shadow-lg">
-<h2 class="font-bold text-gray-700 mb-4">1. Elija una fecha</h2>
-<div class="grid grid-cols-7 gap-1" id="calendar-container">{% for day in enabled_dates %}<div onclick="selectDate('{{ day }}')" class="cursor-pointer p-2 rounded text-center text-sm font-medium bg-gray-100 hover:bg-indigo-100" id="day-{{ day }}">{{ day.day }}</div>{% endfor %}</div>
+<h2 class="font-bold text-gray-700 mb-4">1. Fechas</h2>
+<div class="grid grid-cols-7 gap-1" id="calendar-container">
+{% for day in enabled_dates %}
+<div onclick="selectDate('{{ day }}')" class="cursor-pointer p-2 rounded text-center text-sm font-medium bg-gray-100 hover:bg-indigo-100" id="day-{{ day }}">{{ day.day }}</div>
+{% else %}
+<p class="col-span-7 text-center text-gray-400 py-4">No hay fechas disponibles.</p>
+{% endfor %}
+</div>
 <form id="booking-form" method="POST" class="hidden mt-6"><input type="hidden" name="date" id="input-date"><input type="hidden" name="time_slot" id="input-time">
 <div class="mb-4"><label class="block text-gray-700 text-sm font-bold mb-2">Horario:</label><div id="slots-container" class="grid grid-cols-4 gap-2"></div></div>
 <div class="border-t pt-4"><h2 class="font-bold text-gray-700 mb-2">2. Sus datos</h2>
-<input type="text" name="name" placeholder="Nombre completo" required class="w-full border p-2 rounded mb-2">
+<input type="text" name="name" placeholder="Nombre" required class="w-full border p-2 rounded mb-2">
 <input type="email" name="email" placeholder="Email" required class="w-full border p-2 rounded mb-2">
 <input type="tel" name="phone" placeholder="Telefono" required class="w-full border p-2 rounded mb-4">
 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded text-lg">Reservar</button>
 </div></form></div>
-<div class="bg-white p-6 rounded-xl shadow-lg text-center flex flex-col justify-center"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ request.host_url }}agenda/{{ professional.slug }}" class="mx-auto rounded mb-4"></div>
+<div class="bg-white p-6 rounded-xl shadow-lg text-center"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ request.host_url }}agenda/{{ professional.slug }}" class="mx-auto rounded mb-4"></div>
 </div>
 <script>
 function selectDate(dateStr) {
@@ -58,12 +64,12 @@ def agenda(slug):
             apt_time = datetime.strptime(request.form['time_slot'], '%H:%M').time()
             new_apt = Appointment(professional_id=professional.id, date=apt_date, time=apt_time, client_name=request.form['name'], client_email=request.form.get('email'), client_phone=request.form.get('phone'), status='reservado')
             db.session.add(new_apt); db.session.commit()
-            flash('¡Turno reservado!', 'success')
-        except: flash('Error al reservar.', 'danger')
+            flash('¡Reservado!', 'success')
+        except: flash('Error', 'danger')
         return redirect(url_for('public.agenda', slug=slug))
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
-    return render_template_string(HTML_AGENDA, professional=professional, enabled_dates=enabled_days)
+    return render_template_string(TPL_AGENDA, professional=professional, enabled_dates=enabled_days)
 
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
@@ -73,8 +79,11 @@ def get_slots(slug, date_str):
     except: return jsonify({'error': 'Fecha invalida'}), 400
     day = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
     if not day: return jsonify({'message': 'Dia no habilitado.'})
+    
+    # Lógica de horarios: Usa los guardados o 09-18 por defecto
     start_time = day.start_time if day.start_time else dt_time(9, 0)
     end_time = day.end_time if day.end_time else dt_time(18, 0)
+    
     appointments = Appointment.query.filter_by(professional_id=professional.id, date=selected_date, status='reservado').all()
     booked = [a.time for a in appointments]
     slots = []

@@ -39,7 +39,6 @@ def create_app(config_class=Config):
             db.session.rollback()
             print(f">>> Info DB: {e}")
 
-    # Registrar Blueprints
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
     from app.routes.public import public
