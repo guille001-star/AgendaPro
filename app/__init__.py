@@ -1,4 +1,4 @@
-﻿from flask import Flask
+﻿from flask import Flask, redirect, url_for
 from flask_login import LoginManager
 from flask_mail import Mail
 from config import Config
@@ -39,17 +39,13 @@ def create_app(config_class=Config):
             db.session.rollback()
             print(f">>> Info DB: {e}")
 
-    # REGISTRO DE BLUEPRINTS
+    # Registrar Blueprints
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
     from app.routes.public import public
     
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(dashboard, url_prefix='/dashboard')
-    app.register_blueprint(public) # Sin prefijo, maneja la raíz
-    
-    # Ruta de respaldo para la raíz
-    @app.route('/')
-    def index(): return redirect('/auth/login')
+    app.register_blueprint(public)
     
     return app

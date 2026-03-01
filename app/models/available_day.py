@@ -6,4 +6,3 @@ class AvailableDay(db.Model):
     date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.Time)
     end_time = db.Column(db.Time)
-    def __repr__(self): return f'<AvailableDay {self.date}>'

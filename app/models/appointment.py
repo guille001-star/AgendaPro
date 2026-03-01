@@ -10,4 +10,3 @@ class Appointment(db.Model):
     time = db.Column(db.Time, nullable=False)
     status = db.Column(db.String(20), default='reservado')
     notes = db.Column(db.Text)
-    def __repr__(self): return f'<Appointment {self.date} {self.time}>'
