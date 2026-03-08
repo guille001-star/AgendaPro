@@ -5,21 +5,15 @@
     <p class="text-slate-300 mt-2">Sistema de Reservas</p>
 </div>
 
-<!-- ALERTA GRANDE DE ÉXITO -->
+<!-- Alertas -->
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-        <div class="max-w-2xl mx-auto mb-6 px-4">
+        <div class="max-w-2xl mx-auto mb-4 px-4">
             {% for category, message in messages %}
-                {% if category == 'success' %}
-                    <div class="bg-green-100 border-l-4 border-green-500 text-green-800 p-6 rounded-lg shadow-xl text-center" role="alert">
-                        <p class="font-bold text-2xl mb-2">¡Reserva Confirmada!</p>
-                        <p class="text-lg">{{ message }}</p>
-                    </div>
-                {% else %}
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
-                        <p>{{ message }}</p>
-                    </div>
-                {% endif %}
+                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow" role="alert">
+                    <p class="font-bold">¡Éxito!</p>
+                    <p>{{ message }}</p>
+                </div>
             {% endfor %}
         </div>
     {% endif %}
@@ -41,21 +35,20 @@
             <input type="hidden" name="date" id="input-date">
             <input type="hidden" name="time_slot" id="input-time">
             
-            <h2 class="text-xl font-bold mb-4 text-slate-700">2. Elija horario y complete sus datos</h2>
+            <h2 class="text-xl font-bold mb-4 text-slate-700">2. Horario y datos</h2>
             
             <div class="mb-4">
-                <label class="block text-slate-600 text-sm mb-1">Horario disponible:</label>
+                <label class="block text-slate-600 text-sm mb-1">Horario:</label>
                 <div id="slots-container" class="grid grid-cols-4 gap-2"></div>
             </div>
 
             <div class="space-y-3">
-                <input type="text" name="name" placeholder="Nombre Completo" required class="w-full border p-3 rounded focus:ring-2 focus:ring-indigo-500">
-                <input type="email" name="email" placeholder="Email" required class="w-full border p-3 rounded focus:ring-2 focus:ring-indigo-500">
-                <input type="tel" name="phone" placeholder="Teléfono" required class="w-full border p-3 rounded focus:ring-2 focus:ring-indigo-500">
-                <textarea name="notes" placeholder="Nota (opcional)" class="w-full border p-3 rounded focus:ring-2 focus:ring-indigo-500"></textarea>
+                <input type="text" name="name" placeholder="Nombre Completo" required class="w-full border p-3 rounded">
+                <input type="email" name="email" placeholder="Email" required class="w-full border p-3 rounded">
+                <input type="tel" name="phone" placeholder="Teléfono" required class="w-full border p-3 rounded">
             </div>
 
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded mt-4 text-lg transition">
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded mt-4 text-lg">
                 Confirmar Reserva
             </button>
         </form>
