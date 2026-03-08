@@ -57,13 +57,11 @@ def agenda(slug):
             try:
                 sdk = mercadopago.SDK(professional.mp_access_token)
                 
-                # Construir URL base absoluta
                 base_url = request.host_url.rstrip('/')
-                success_url = f"{base_url}/pago/exito"
-                failure_url = f"{base_url}/pago/error"
+                # Pasamos el slug en la URL de éxito para saber a dónde volver
+                success_url = f"{base_url}/pago/exito/{professional.slug}"
+                failure_url = f"{base_url}/pago/error/{professional.slug}"
                 
-                print(f"URLs de retorno: {success_url}") # Log para debug
-
                 preference_data = {
                     "items": [
                         {
@@ -78,14 +76,11 @@ def agenda(slug):
                         "success": success_url,
                         "failure": failure_url,
                     },
-                    # Quitamos auto_return para evitar el error en TEST
                     "external_reference": str(new_apt.id)
                 }
                 
                 preference_response = sdk.preference().create(preference_data)
-                print(f"MP Response: {preference_response}") # Log importante
 
-                # Buscar la URL (init_point para real, sandbox_init_point para test)
                 payment_url = None
                 if 'response' in preference_response:
                     payment_url = preference_response['response'].get('init_point')
@@ -124,7 +119,8 @@ def get_slots(slug, date_str):
     start_time = day.start_time or dt_time(9,0)
     end_time = day.end_time or dt_time(18,0)
     duration = day.slot_duration or 30
-    apps = Appointment.query.filter_by(professional_id=professional.id, date=selected_date, status='reservado').all()
+    # IMPORTANTE: Solo mostrar como reservados los que están 'reservado' o 'pendiente' (por si pagó pero no volvió)
+    apps = Appointment.query.filter_by(professional_id=professional.id, date=selected_date).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
     slots = []
     curr = datetime.combine(selected_date, start_time)
@@ -134,12 +130,24 @@ def get_slots(slug, date_str):
         curr += timedelta(minutes=duration)
     return jsonify({'slots': slots})
 
-@public.route('/pago/exito')
-def pago_exito():
-    flash('¡Pago realizado!', 'success')
-    return redirect(url_for('auth.login'))
+# --- RUTAS DE RETORNO CON SLUG ---
 
-@public.route('/pago/error')
-def pago_error():
-    flash('Pago fallido.', 'danger')
-    return redirect(url_for('auth.login'))
+@public.route('/pago/exito/<slug>')
+def pago_exito(slug):
+    # Buscamos el turno pendiente más reciente de este profesional para confirmarlo
+    # Idealmente usaríamos el external_reference, pero así es más simple y robusto
+    professional = User.query.filter_by(slug=slug).first()
+    if professional:
+        # Actualizar el último turno pendiente a reservado
+        apt = Appointment.query.filter_by(professional_id=professional.id, status='pendiente').order_by(Appointment.id.desc()).first()
+        if apt:
+            apt.status = 'reservado'
+            db.session.commit()
+            
+    flash('¡Pago realizado! Su turno está confirmado.', 'success')
+    return redirect(url_for('public.agenda', slug=slug))
+
+@public.route('/pago/error/<slug>')
+def pago_error(slug):
+    flash('El pago fue rechazado. Intente nuevamente.', 'danger')
+    return redirect(url_for('public.agenda', slug=slug))
