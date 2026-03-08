@@ -4,6 +4,7 @@ from flask_mail import Mail
 from config import Config
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -12,6 +13,9 @@ mail = Mail()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    
+    # IMPORTANTE: Arregla las URLs para que sean HTTPS en Railway
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -31,11 +35,9 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
-            # Migraciones existentes
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS slot_duration INTEGER DEFAULT 30'))
-            # NUEVAS MIGRACIONES MP
             db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_access_token VARCHAR(200)'))
             db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_public_key VARCHAR(200)'))
             db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS appointment_price FLOAT DEFAULT 0'))

@@ -56,10 +56,18 @@ def agenda(slug):
         if status == 'pendiente':
             try:
                 sdk = mercadopago.SDK(professional.mp_access_token)
+                
+                # Construir URL base absoluta
+                base_url = request.host_url.rstrip('/')
+                success_url = f"{base_url}/pago/exito"
+                failure_url = f"{base_url}/pago/error"
+                
+                print(f"URLs de retorno: {success_url}") # Log para debug
+
                 preference_data = {
                     "items": [
                         {
-                            "title": f"Turno {professional.name} - {apt_date}",
+                            "title": f"Turno {professional.name}",
                             "quantity": 1,
                             "currency_id": "ARS",
                             "unit_price": float(professional.appointment_price)
@@ -67,18 +75,17 @@ def agenda(slug):
                     ],
                     "payer": {"email": client_email},
                     "back_urls": {
-                        "success": request.host_url + "pago/exito",
-                        "failure": request.host_url + "pago/error",
+                        "success": success_url,
+                        "failure": failure_url,
                     },
-                    "auto_return": "approved",
+                    # Quitamos auto_return para evitar el error en TEST
                     "external_reference": str(new_apt.id)
                 }
-                preference_response = sdk.preference().create(preference_data)
                 
-                # DEBUG: Ver qué respondió MP
-                print(f"MP Response: {preference_response}")
+                preference_response = sdk.preference().create(preference_data)
+                print(f"MP Response: {preference_response}") # Log importante
 
-                # Buscar la URL correcta (init_point o sandbox_init_point)
+                # Buscar la URL (init_point para real, sandbox_init_point para test)
                 payment_url = None
                 if 'response' in preference_response:
                     payment_url = preference_response['response'].get('init_point')
@@ -88,8 +95,7 @@ def agenda(slug):
                 if payment_url:
                     return redirect(payment_url)
                 else:
-                    # Si MP respondió pero no hay URL
-                    error_msg = preference_response.get('message', 'Error desconocido en MP')
+                    error_msg = preference_response.get('response', {}).get('message', 'Error desconocido')
                     flash(f'Error MP: {error_msg}', 'danger')
                     return redirect(url_for('public.agenda', slug=slug))
 
