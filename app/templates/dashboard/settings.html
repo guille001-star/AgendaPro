@@ -1,0 +1,31 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto p-6">
+    <div class="bg-white rounded-xl shadow-lg p-8">
+        <h1 class="text-2xl font-bold text-slate-800 mb-2">Configuración de Cobros</h1>
+        <p class="text-slate-500 text-sm mb-6">Ingresa tus credenciales de Mercado Pago para recibir pagos online. Si no los completas, tus turnos serán gratuitos.</p>
+        
+        <form method="POST" class="space-y-6">
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Precio del Turno ($)</label>
+                <input type="text" name="appointment_price" value="{{ current_user.appointment_price or '' }}" placeholder="Ej: 1500" class="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Access Token (MP)</label>
+                <input type="text" name="mp_access_token" value="{{ current_user.mp_access_token or '' }}" placeholder="TEST-xxxx-xxxx-xxxx" class="w-full border border-slate-300 p-3 rounded focus:ring-2 focus:ring-indigo-500 text-xs font-mono">
+                <p class="text-xs text-slate-400 mt-1">Lo encuentras en Mercado Pago Developers > Credenciales.</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-2">Public Key (MP)</label>
+                <input type="text" name="mp_public_key" value="{{ current_user.mp_public_key or '' }}" placeholder="TEST-xxxx" class="w-full border border-slate-300 p-3 rounded focus:ring-2 focus:ring-indigo-500 text-xs font-mono">
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg">
+                Guardar Configuración
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

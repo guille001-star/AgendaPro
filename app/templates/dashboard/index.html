@@ -7,6 +7,7 @@
             <h1 class="text-xl font-bold">{{ current_user.name }}</h1>
         </div>
         <div class="flex items-center gap-2 flex-wrap justify-end">
+            <a href="{{ url_for('dashboard.settings') }}" class="text-xs bg-green-600 px-3 py-2 rounded hover:bg-green-700">Cobros</a>
             <a href="{{ url_for('auth.change_password') }}" class="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">Cambiar Clave</a>
             <a href="{{ url_for('dashboard.export_csv') }}" class="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600">Exportar</a>
             <a href="{{ url_for('auth.logout') }}" class="text-xs bg-red-600 px-3 py-2 rounded hover:bg-red-700">Salir</a>
@@ -221,3 +222,4 @@
     }, 5000);
 </script>
 {% endblock %}
+

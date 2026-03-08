@@ -119,3 +119,23 @@ def export_csv():
         writer.writerow([apt.date.strftime('%d/%m/%Y'), apt.time.strftime('%H:%M'), apt.client_name, apt.client_phone, apt.client_email or '', apt.status])
     output.seek(0)
     return Response(output, mimetype='text/csv', headers={'Content-Disposition': 'attachment;filename=agenda.csv'})
+
+# --- CONFIGURACIÓN DE PAGOS ---
+@dashboard.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        # Guardar datos
+        current_user.mp_access_token = request.form.get('mp_access_token')
+        current_user.mp_public_key = request.form.get('mp_public_key')
+        price_str = request.form.get('appointment_price', '0').replace(',', '.')
+        try:
+            current_user.appointment_price = float(price_str)
+        except:
+            current_user.appointment_price = 0.0
+        
+        db.session.commit()
+        flash('Configuración guardada.', 'success')
+        return redirect(url_for('dashboard.settings'))
+        
+    return render_template('dashboard/settings.html')
