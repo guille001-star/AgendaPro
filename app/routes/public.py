@@ -151,3 +151,14 @@ def pago_exito(slug):
 def pago_error(slug):
     flash('El pago fue rechazado. Intente nuevamente.', 'danger')
     return redirect(url_for('public.agenda', slug=slug))
+
+# --- LISTADO DE PROFESIONALES (RUTA SEGURA) ---
+@public.route('/ver-profesionales')
+def ver_profesionales():
+    users = User.query.all()
+    html = "<html><head><meta charset='UTF-8'><title>Lista</title></head><body style='font-family:sans-serif; padding:20px;'>"
+    html += "<h1>Lista de Profesionales</h1><ul>"
+    for u in users:
+        html += f"<li><b>{u.name}</b> ({u.email}) - <a href='/agenda/{u.slug}'>Ver Agenda</a></li>"
+    html += "</ul></body></html>"
+    return html
