@@ -46,7 +46,7 @@ def toggle_day(date_str):
                 date=date_obj,
                 start_time=datetime.strptime('09:00', '%H:%M').time(),
                 end_time=datetime.strptime('18:00', '%H:%M').time(),
-                slot_duration=30 # Default al crear
+                slot_duration=30
             )
             db.session.add(new_day)
             action = 'added'
@@ -56,7 +56,6 @@ def toggle_day(date_str):
         db.session.rollback()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# NUEVO: Obtener config guardada
 @dashboard.route('/get-day-config/<date_str>')
 @login_required
 def get_day_config(date_str):
@@ -80,13 +79,18 @@ def set_hours_by_date(date_str):
     data = request.get_json()
     start_str = data.get('start_time')
     end_str = data.get('end_time')
-    duration = data.get('slot_duration', 30, type=int) # Recibir duración
+    
+    # CORRECCIÓN: Forma correcta de leer el entero
+    try:
+        duration = int(data.get('slot_duration', 30))
+    except:
+        duration = 30
     
     if start_str and end_str:
         try:
             day.start_time = datetime.strptime(start_str, '%H:%M').time()
             day.end_time = datetime.strptime(end_str, '%H:%M').time()
-            day.slot_duration = duration # Guardar duración
+            day.slot_duration = duration
             db.session.commit()
             return jsonify({'status': 'success'})
         except Exception as e:
