@@ -14,8 +14,6 @@
     </header>
 
     <div class="flex flex-col lg:flex-row gap-6 p-6 max-w-7xl mx-auto">
-        
-        <!-- CALENDARIO -->
         <div class="lg:w-2/3 space-y-6">
             <div class="bg-white rounded-xl shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
@@ -64,7 +62,6 @@
             </div>
         </div>
 
-        <!-- TURNOS -->
         <div class="lg:w-1/3 space-y-6">
             <div class="bg-white p-6 rounded-xl shadow-lg">
                 <div class="flex justify-between items-center mb-4">
@@ -109,7 +106,7 @@
     </div>
 </div>
 
-<!-- MODAL DE HORARIOS -->
+<!-- MODAL DE HORARIOS (ACTUALIZADO) -->
 <div id="hours-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
         <h3 class="text-lg font-bold mb-4 text-slate-800">Configurar Horario</h3>
@@ -122,6 +119,11 @@
             <div>
                 <label class="block text-sm font-medium text-slate-700">Hora Fin</label>
                 <input type="time" id="end-time" name="end_time" value="18:00" class="w-full border border-slate-300 p-2 rounded">
+            </div>
+            <!-- NUEVO: Duración -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700">Duración del turno (minutos)</label>
+                <input type="number" id="slot-duration" name="slot_duration" value="30" min="5" max="240" step="5" class="w-full border border-slate-300 p-2 rounded">
             </div>
             <div class="flex gap-2 mt-4">
                 <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Guardar</button>
@@ -164,8 +166,16 @@
     function showHoursModal(dateStr) {
         currentEditingDate = dateStr;
         document.getElementById('modal-date').innerText = dateStr;
-        document.getElementById('start-time').value = '09:00';
-        document.getElementById('end-time').value = '18:00';
+        
+        // Cargar config existente o usar defaults
+        fetch('/dashboard/get-day-config/' + dateStr)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('start-time').value = data.start_time || '09:00';
+            document.getElementById('end-time').value = data.end_time || '18:00';
+            document.getElementById('slot-duration').value = data.slot_duration || 30;
+        });
+
         const modal = document.getElementById('hours-modal');
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -183,7 +193,8 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 start_time: document.getElementById('start-time').value, 
-                end_time: document.getElementById('end-time').value 
+                end_time: document.getElementById('end-time').value,
+                slot_duration: document.getElementById('slot-duration').value
             })
         })
         .then(r => r.json())

@@ -28,13 +28,11 @@ def agenda(slug):
             flash('Formato de fecha u hora inválido.', 'danger')
             return redirect(url_for('public.agenda', slug=slug))
 
-        # Validar día disponible
         day = AvailableDay.query.filter_by(professional_id=professional.id, date=apt_date).first()
         if not day:
             flash('Este día no está disponible.', 'danger')
             return redirect(url_for('public.agenda', slug=slug))
 
-        # Crear turno
         new_apt = Appointment(
             professional_id=professional.id,
             date=apt_date,
@@ -72,18 +70,17 @@ def get_slots(slug, date_str):
     except ValueError:
         return jsonify({'error': 'Fecha inválida'}), 400
 
-    # Buscar el día habilitado
     day = AvailableDay.query.filter_by(professional_id=professional.id, date=selected_date).first()
     
     if not day:
         return jsonify({'message': 'Día no habilitado por el profesional.'})
 
-    # Determinar horario de atención
-    # Si start_time es NULL (datos antiguos), usar 09:00 - 18:00 por defecto
     start_time = day.start_time if day.start_time else dt_time(9, 0)
     end_time = day.end_time if day.end_time else dt_time(18, 0)
 
-    # Buscar turnos ya reservados
+    # CAMBIO CLAVE: Usar duración configurada o 30 por defecto
+    slot_duration = day.slot_duration if day.slot_duration else 30
+
     appointments = Appointment.query.filter_by(
         professional_id=professional.id,
         date=selected_date,
@@ -92,7 +89,6 @@ def get_slots(slug, date_str):
     
     booked_times = [apt.time for apt in appointments]
 
-    # Generar slots cada 30 mins
     slots = []
     current_dt = datetime.combine(selected_date, start_time)
     end_dt = datetime.combine(selected_date, end_time)
@@ -101,6 +97,7 @@ def get_slots(slug, date_str):
         slot_time = current_dt.time()
         if slot_time not in booked_times:
             slots.append(slot_time.strftime('%H:%M'))
-        current_dt += timedelta(minutes=30)
+        # Usamos la variable dinámica aquí
+        current_dt += timedelta(minutes=slot_duration)
 
     return jsonify({'slots': slots})
