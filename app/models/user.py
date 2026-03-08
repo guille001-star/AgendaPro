@@ -2,15 +2,18 @@
 from flask_login import UserMixin
 
 class User(UserMixin, db.Model):
-    # Especificamos explícitamente el nombre de la tabla
     __tablename__ = 'users'
-    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256))
     slug = db.Column(db.String(100), unique=True)
     
+    # --- MERCADO PAGO (Opcional por profesional) ---
+    mp_access_token = db.Column(db.String(200)) # Token privado
+    mp_public_key = db.Column(db.String(200))   # Token público
+    appointment_price = db.Column(db.Float, default=0.0) # Precio del turno
+
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
         self.password_hash = generate_password_hash(password)

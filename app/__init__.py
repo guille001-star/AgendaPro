@@ -21,8 +21,7 @@ def create_app(config_class=Config):
 
     @app.template_filter('format_date')
     def format_date(value):
-        if value:
-            return value.strftime('%d/%m/%Y')
+        if value: return value.strftime('%d/%m/%Y')
         return ""
 
     from app.models.user import User
@@ -32,10 +31,14 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
+            # Migraciones existentes
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
-            # NUEVA MIGRACIÓN: Agregar columna de duración
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS slot_duration INTEGER DEFAULT 30'))
+            # NUEVAS MIGRACIONES MP
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_access_token VARCHAR(200)'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_public_key VARCHAR(200)'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS appointment_price FLOAT DEFAULT 0'))
             db.session.commit()
             print(">>> Sistema iniciado correctamente.")
         except Exception as e:
