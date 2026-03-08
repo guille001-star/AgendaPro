@@ -74,11 +74,27 @@ def agenda(slug):
                     "external_reference": str(new_apt.id)
                 }
                 preference_response = sdk.preference().create(preference_data)
-                payment_url = preference_response["response"]["init_point"]
-                return redirect(payment_url)
+                
+                # DEBUG: Ver qué respondió MP
+                print(f"MP Response: {preference_response}")
+
+                # Buscar la URL correcta (init_point o sandbox_init_point)
+                payment_url = None
+                if 'response' in preference_response:
+                    payment_url = preference_response['response'].get('init_point')
+                    if not payment_url:
+                        payment_url = preference_response['response'].get('sandbox_init_point')
+
+                if payment_url:
+                    return redirect(payment_url)
+                else:
+                    # Si MP respondió pero no hay URL
+                    error_msg = preference_response.get('message', 'Error desconocido en MP')
+                    flash(f'Error MP: {error_msg}', 'danger')
+                    return redirect(url_for('public.agenda', slug=slug))
+
             except Exception as e:
-                print(f"Error MP: {e}")
-                flash('Error al generar el pago.', 'danger')
+                flash(f'Error crítico: {str(e)}', 'danger')
                 return redirect(url_for('public.agenda', slug=slug))
 
         flash('¡Turno reservado!', 'success')
@@ -114,10 +130,10 @@ def get_slots(slug, date_str):
 
 @public.route('/pago/exito')
 def pago_exito():
-    flash('¡Pago realizado! Su turno está confirmado.', 'success')
+    flash('¡Pago realizado!', 'success')
     return redirect(url_for('auth.login'))
 
 @public.route('/pago/error')
 def pago_error():
-    flash('El pago falló.', 'danger')
+    flash('Pago fallido.', 'danger')
     return redirect(url_for('auth.login'))
