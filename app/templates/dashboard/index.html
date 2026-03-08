@@ -138,16 +138,12 @@
 
     function handleDayClick(dateStr) {
         const el = document.getElementById('day-' + dateStr);
-        if(el.classList.contains('bg-green-500')){
-            showHoursModal(dateStr);
-        } else {
-            toggleDay(dateStr);
-        }
+        if(el.classList.contains('bg-green-500')){ showHoursModal(dateStr); } else { toggleDay(dateStr); }
     }
 
     function toggleDay(dateStr) {
         fetch('/dashboard/toggle-day/' + dateStr, {method: 'POST'})
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             if(data.status === 'success'){
                 const el = document.getElementById('day-' + dateStr);
@@ -167,7 +163,6 @@
         currentEditingDate = dateStr;
         document.getElementById('modal-date').innerText = dateStr;
         
-        // Cargar config existente o usar defaults
         fetch('/dashboard/get-day-config/' + dateStr)
         .then(r => r.json())
         .then(data => {
@@ -188,29 +183,40 @@
 
     document.getElementById('hours-form').addEventListener('submit', function(e){
         e.preventDefault();
+        
+        let startTime = document.getElementById('start-time').value;
+        let endTime = document.getElementById('end-time').value;
+        let duration = document.getElementById('slot-duration').value;
+
         fetch('/dashboard/set-hours-by-date/' + currentEditingDate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                start_time: document.getElementById('start-time').value, 
-                end_time: document.getElementById('end-time').value,
-                slot_duration: document.getElementById('slot-duration').value
+                start_time: startTime, 
+                end_time: endTime,
+                slot_duration: duration
             })
         })
-        .then(r => r.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => { throw new Error(text) })
+            }
+            return response.json();
+        })
         .then(res => {
             if(res.status === 'success'){
-                alert('Horarios guardados');
+                alert('¡Guardado correctamente!');
                 hideHoursModal();
             } else {
-                alert('Error: ' + res.message);
+                alert('Error del servidor: ' + (res.message || 'Desconocido'));
             }
+        })
+        .catch(error => {
+            alert('Error de conexión o servidor: ' + error.message);
         });
     });
 
-    function copyLink() {
-        var copyText = document.getElementById("myLink"); copyText.select(); document.execCommand("copy"); alert("Copiado!");
-    }
+    function copyLink() { var c = document.getElementById("myLink"); c.select(); document.execCommand("copy"); alert("Copiado!"); }
     
     setInterval(function() {
         fetch('/dashboard/live-data?v=' + new Date().getTime())
@@ -226,4 +232,3 @@
             });
     }, 5000);
 </script>
-{% endblock %}
