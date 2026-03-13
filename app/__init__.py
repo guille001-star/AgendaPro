@@ -13,8 +13,6 @@ mail = Mail()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-    
-    # IMPORTANTE: Arregla las URLs para que sean HTTPS en Railway
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     db.init_app(app)
@@ -47,10 +45,11 @@ def create_app(config_class=Config):
             db.session.rollback()
             print(f">>> Nota DB: {e}")
 
+    # Registrar Rutas
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
     from app.routes.public import public
-from app.routes.admin import admin
+    from app.routes.admin import admin
 
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(dashboard, url_prefix='/dashboard')
@@ -58,4 +57,3 @@ from app.routes.admin import admin
     app.register_blueprint(admin, url_prefix='/admin')
 
     return app
-
