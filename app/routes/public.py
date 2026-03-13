@@ -12,13 +12,11 @@ public = Blueprint('public', __name__)
 def home():
     return redirect(url_for('auth.login'))
 
-# --- DIRECTORIO PUBLICO ---
 @public.route('/directorio')
 def lista():
     users = User.query.all()
     return render_template('public/lista.html', users=users)
 
-# --- AGENDA ---
 @public.route('/agenda/<slug>', methods=['GET', 'POST'])
 def agenda(slug):
     professional = User.query.filter_by(slug=slug).first_or_404()
@@ -42,10 +40,8 @@ def agenda(slug):
             flash('Dia no disponible.', 'danger')
             return redirect(url_for('public.agenda', slug=slug))
 
-        # Determinar si requiere pago
         requiere_pago = professional.appointment_price and professional.appointment_price > 0 and professional.mp_access_token
 
-        # Crear turno (PENDIENTE si hay pago, RESERVADO si es gratis)
         status = 'pendiente' if requiere_pago else 'reservado'
         
         new_apt = Appointment(
@@ -55,10 +51,9 @@ def agenda(slug):
         db.session.add(new_apt)
         db.session.commit()
 
-        # Si requiere pago, ir a Mercado Pago
         if requiere_pago:
             try:
-                sdk = mercadopago.SDK(professional.mp_access_token) # Se desencripta automáticamente
+                sdk = mercadopago.SDK(professional.mp_access_token) 
                 base_url = request.host_url.rstrip('/')
                 
                 preference_data = {
@@ -74,7 +69,7 @@ def agenda(slug):
                         "failure": f"{base_url}/pago/error",
                     },
                     "auto_return": "approved",
-                    "external_reference": str(new_apt.id) # ID para identificar el turno al volver
+                    "external_reference": str(new_apt.id)
                 }
                 
                 pref_response = sdk.preference().create(preference_data)
@@ -84,7 +79,6 @@ def agenda(slug):
                     return redirect(pay_url)
                 else:
                     flash('Error al generar link de pago.', 'danger')
-                    # Si falla, borramos el turno pendiente para no ocupar el lugar
                     db.session.delete(new_apt); db.session.commit()
             except Exception as e:
                 flash(f'Error MP: {str(e)}', 'danger')
@@ -93,12 +87,10 @@ def agenda(slug):
         flash('¡Turno reservado!', 'success')
         return redirect(url_for('public.agenda', slug=slug))
 
-    # GET
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_days)
 
-# --- API HORARIOS ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -112,7 +104,6 @@ def get_slots(slug, date_str):
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
     
-    # Excluir tanto reservados como pendientes de pago
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
     
@@ -124,25 +115,26 @@ def get_slots(slug, date_str):
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
-# --- RETORNO MERCADO PAGO (ROBUSTO) ---
+# --- RETORNO MERCADO PAGO (MEJORADO) ---
 @public.route('/pago/exito')
 def pago_exito():
-    # MP devuelve 'external_reference' con el ID del turno
     ref = request.args.get('external_reference')
     if ref:
         apt = Appointment.query.get(int(ref))
-        # Verificamos que exista y esté pendiente
         if apt and apt.status == 'pendiente':
             apt.status = 'reservado'
             db.session.commit()
-            flash('¡Pago confirmado! Su turno está reservado.', 'success')
-            # Idealmente redirigir a una página de confirmación, por ahora a la raíz
-            return redirect(url_for('public.home'))
+            
+            # REDIRIGIR A LA AGENDA DEL PROFESIONAL
+            professional = User.query.get(apt.professional_id)
+            if professional:
+                flash('¡Pago confirmado! Su turno está reservado.', 'success')
+                return redirect(url_for('public.agenda', slug=professional.slug))
     
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
 
 @public.route('/pago/error')
 def pago_error():
-    flash('El pago fue rechazado.', 'danger')
+    flash('El pago fue rechazado. Intente nuevamente.', 'danger')
     return redirect(url_for('public.home'))
