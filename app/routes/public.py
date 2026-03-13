@@ -106,7 +106,7 @@ def get_slots(slug, date_str):
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
-# --- CONFIRMACIÓN DE PAGO (SOLO WHATSAPP) ---
+# --- CONFIRMACIÓN DE PAGO (MENSAJE CORREGIDO) ---
 @public.route('/pago/exito')
 def pago_exito():
     ref = request.args.get('external_reference')
@@ -124,8 +124,8 @@ def pago_exito():
         except: pass
 
     if apt and prof:
-        # Mensaje para WhatsApp
-        msg = f"Hola! Confirmé mi turno con {{ prof.name }} para el {{ apt.date.strftime('%d/%m') }} a las {{ apt.time.strftime('%H:%M') }}."
+        # Armo el mensaje fuera del template para que sea limpio
+        msg_text = f"Hola! Confirmé mi turno con {prof.name} para el {apt.date.strftime('%d/%m')} a las {apt.time.strftime('%H:%M')}."
         return render_template_string("""
         <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
         <body class='bg-green-50 min-h-screen flex items-center justify-center p-4'>
@@ -148,7 +148,7 @@ def pago_exito():
             <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-indigo-600 font-bold text-sm">Volver a la Agenda</a>
         </div>
         </body></html>
-        """, apt=apt, prof=prof, msg=msg)
+        """, apt=apt, prof=prof, msg=msg_text)
 
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
