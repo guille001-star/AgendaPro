@@ -12,9 +12,9 @@ HTML_LOGIN = """
 <body class="bg-slate-100 min-h-screen flex items-center justify-center">
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
 <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
-<form method="POST">
-<div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded"></div>
-<div class="mb-6"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded"></div>
+<form method="POST" autocomplete="off">
+<div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"></div>
+<div class="mb-6"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
 <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded font-bold">Entrar</button>
 </form>
 <p class="text-center text-sm mt-4">¿No tienes cuenta? <a href="{{ url_for('auth.register') }}" class="text-indigo-600">Crear Cuenta</a></p>
@@ -26,11 +26,11 @@ HTML_REGISTER = """
 <body class="bg-slate-100 min-h-screen flex items-center justify-center">
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
 <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
-<form method="POST">
+<form method="POST" autocomplete="off">
 <div class="mb-4"><label class="block mb-1">Nombre</label><input type="text" name="name" required class="w-full border p-2 rounded"></div>
-<div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded"></div>
-<div class="mb-4"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded"></div>
-<div class="mb-6"><label class="block mb-1">Confirmar</label><input type="password" name="confirm" required class="w-full border p-2 rounded"></div>
+<div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off"></div>
+<div class="mb-4"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
+<div class="mb-6"><label class="block mb-1">Confirmar</label><input type="password" name="confirm" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
 <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded font-bold">Registrarse</button>
 </form>
 <p class="text-center text-sm mt-4">¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}" class="text-indigo-600">Iniciar Sesión</a></p>
