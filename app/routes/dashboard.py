@@ -139,3 +139,34 @@ def settings():
         return redirect(url_for('dashboard.settings'))
         
     return render_template('dashboard/settings.html')
+
+# --- CONFIGURACIÓN DE PAGOS ---
+@dashboard.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        price = request.form.get('price', 0, type=float)
+        token = request.form.get('token')
+        public_key = request.form.get('public_key')
+        
+        current_user.appointment_price = price
+        current_user.mp_public_key = public_key
+        if token: # Solo actualizar si se proporciona uno nuevo
+            current_user.mp_access_token = token
+        db.session.commit()
+        flash('Configuracion guardada.', 'success')
+        return redirect(url_for('dashboard.settings'))
+        
+    return render_template_string("""
+    <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
+    <body class='bg-gray-100 p-8'>
+    <div class='max-w-xl mx-auto bg-white p-6 rounded-xl shadow'>
+    <h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2>
+    <form method='POST'>
+    <div class='mb-4'><label>Precio del Turno ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded'></div>
+    <div class='mb-4'><label>Access Token (MP)</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'>
+    <p class='text-xs text-gray-400 mt-1'>Tu token actual está encriptado. Ingrese uno nuevo solo si desea cambiarlo.</p></div>
+    <div class='mb-4'><label>Public Key (MP)</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
+    <button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button>
+    </form></div></body></html>
+    """)
