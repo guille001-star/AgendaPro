@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response
+﻿from flask import Blueprint, render_template, render_template_string, request, redirect, url_for, flash, jsonify, Response
 from flask_login import login_required, current_user
 from app import db
 from app.models.appointment import Appointment
@@ -83,7 +83,7 @@ def export_csv():
     out.seek(0)
     return Response(out, mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=agenda.csv'})
 
-# --- CONFIGURACIÓN DE PAGOS (MERCADO PAGO) ---
+# --- CONFIGURACIÓN DE PAGOS ---
 @dashboard.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
