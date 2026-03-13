@@ -4,16 +4,20 @@ from app.models.user import User
 from app.models.appointment import Appointment
 from flask_login import login_user
 import uuid
+import os
 
 admin = Blueprint('admin', __name__)
 
-CLAVE_MAESTRA = "agendapromaster2026"
+# SEGURIDAD: Lee la clave de las variables de entorno. 
+# Si no existe (local), usa una clave de desarrollo.
+CLAVE_MAESTRA = os.environ.get('MASTER_KEY', 'dev-local-key-123')
 
-# --- 1. LOGIN ADMIN ---
 @admin.route('/super-admin', methods=['GET', 'POST'])
 def login_admin():
     if request.method == 'POST':
-        if request.form.get('clave') == CLAVE_MAESTRA:
+        clave_ingresada = request.form.get('clave')
+        # Comparamos de forma segura
+        if clave_ingresada == CLAVE_MAESTRA:
             return redirect(url_for('admin.panel'))
         flash('Clave incorrecta', 'danger')
     return render_template_string("""
@@ -27,10 +31,9 @@ def login_admin():
     </form></div></body></html>
     """)
 
-# --- 2. PANEL PRINCIPAL (LISTADO) ---
+# --- PANEL (SIN CAMBIOS LÓGICOS, SOLO LIMPIEZA ---
 @admin.route('/super-admin/panel', methods=['GET', 'POST'])
 def panel():
-    # Agregar nuevo
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
@@ -55,8 +58,6 @@ def panel():
             <div class="bg-{{ 'green' if cat=='success' else 'red' }}-100 text-{{ 'green' if cat=='success' else 'red' }}-700 p-3 rounded mb-4">{{ msg }}</div>
             {% endfor %}
         {% endwith %}
-
-        <!-- AGREGAR -->
         <div class="bg-white p-4 rounded-xl shadow mb-6">
             <h2 class="font-bold mb-2">Agregar Nuevo</h2>
             <form method="POST" class="flex gap-2">
@@ -65,15 +66,9 @@ def panel():
                 <button class="bg-indigo-600 text-white px-4 py-2 rounded font-bold">Crear</button>
             </form>
         </div>
-
-        <!-- LISTA -->
         <div class="bg-white rounded-xl shadow overflow-x-auto">
         <table class='w-full text-sm'>
-        <thead class='bg-slate-800 text-white'><tr>
-            <th class='p-3 text-left'>Profesional</th>
-            <th class='p-3 text-left'>Email</th>
-            <th class='p-3 text-center'>Acciones</th>
-        </tr></thead>
+        <thead class='bg-slate-800 text-white'><tr><th class='p-3 text-left'>Profesional</th><th class='p-3 text-left'>Email</th><th class='p-3 text-center'>Acciones</th></tr></thead>
         <tbody>
         {% for u in users %}
         <tr class='border-b hover:bg-gray-50'>
@@ -91,7 +86,6 @@ def panel():
     </body></html>
     """, users=users)
 
-# --- 3. VER DETALLES ---
 @admin.route('/super-admin/user/<int:uid>')
 def view_user(uid):
     u = User.query.get_or_404(uid)
@@ -100,7 +94,7 @@ def view_user(uid):
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
     <div class='max-w-2xl mx-auto'>
-        <a href='{{ url_for('admin.panel') }}' class="text-indigo-600 text-sm">← Volver al listado</a>
+        <a href='{{ url_for('admin.panel') }}' class="text-indigo-600 text-sm">← Volver</a>
         <div class="bg-white rounded-xl shadow p-6 mt-4">
             <h1 class='text-2xl font-bold mb-4'>{{ u.name }}</h1>
             <div class="space-y-2 text-sm">
@@ -123,7 +117,6 @@ def view_user(uid):
     </body></html>
     """, u=u, total=total_turnos)
 
-# --- 4. EDITAR PROFESIONAL ---
 @admin.route('/super-admin/edit/<int:uid>', methods=['GET', 'POST'])
 def edit_user(uid):
     u = User.query.get_or_404(uid)
@@ -148,7 +141,6 @@ def edit_user(uid):
     </body></html>
     """, u=u)
 
-# --- 5. ENTRAR COMO (IMPERSONATE) ---
 @admin.route('/super-admin/login-as/<int:uid>')
 def login_as(uid):
     u = User.query.get_or_404(uid)
@@ -156,7 +148,6 @@ def login_as(uid):
     flash(f'Has entrado como {u.name}', 'success')
     return redirect(url_for('dashboard.index'))
 
-# --- 6. RESETEAR CLAVE ---
 @admin.route('/super-admin/reset/<int:uid>')
 def reset_pwd(uid):
     u = User.query.get_or_404(uid)

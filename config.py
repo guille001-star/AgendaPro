@@ -1,30 +1,17 @@
 ﻿import os
 from dotenv import load_dotenv
-from datetime import datetime
 
-load_dotenv()
-
-def format_date(value):
-    months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", 
-              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-    days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-    date_obj = value
-    if isinstance(value, str):
-        date_obj = datetime.strptime(value, '%Y-%m-%d').date()
-    return f"{days[date_obj.weekday()]} {date_obj.day} de {months[date_obj.month-1]}"
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'una-clave-por-defecto-muy-dificil'
-    
-    # Base de datos
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'una-clave-secreta-muy-dificil'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    if not SQLALCHEMY_DATABASE_URI:
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///agendapro.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Configuración de Email (Gmail)
-    MAIL_SERVER = 'smtp.gmail.com'
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') # Tu email de Gmail
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') # La App Password de 16 caracteres
+    # Configuración de Mail (ejemplo)
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
