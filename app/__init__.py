@@ -50,9 +50,12 @@ def create_app(config_class=Config):
     from app.routes.auth import auth
     from app.routes.dashboard import dashboard
     from app.routes.public import public
+from app.routes.admin import admin
 
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(dashboard, url_prefix='/dashboard')
     app.register_blueprint(public)
+    app.register_blueprint(admin, url_prefix='/admin')
 
     return app
+

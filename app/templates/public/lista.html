@@ -1,0 +1,18 @@
+﻿{% extends "base.html" %}
+{% block content %}
+<div class="bg-slate-800 text-white py-12 text-center">
+    <h1 class="text-4xl font-bold">Directorio de Profesionales</h1>
+    <p class="text-slate-300 mt-2">Selecciona un profesional para ver su agenda disponible.</p>
+</div>
+<div class="container mx-auto p-6 grid md:grid-cols-3 gap-6">
+    {% for user in users %}
+    <a href="{{ url_for('public.agenda', slug=user.slug) }}" class="bg-white p-6 rounded-xl shadow hover:shadow-xl transition block">
+        <h2 class="text-xl font-bold text-slate-800">{{ user.name }}</h2>
+        <p class="text-slate-500 text-sm mt-1">{{ user.email }}</p>
+        <div class="mt-4 text-indigo-600 font-semibold text-sm">Reservar turno →</div>
+    </a>
+    {% else %}
+    <p class="col-span-3 text-center text-gray-400">No hay profesionales registrados.</p>
+    {% endfor %}
+</div>
+{% endblock %}

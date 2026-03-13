@@ -1,94 +1,61 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
+﻿from flask import Blueprint, render_template_string, request, flash, redirect, url_for
 from app import db
 from app.models.user import User
-from sqlalchemy import text
-import os
-import re
 
 admin = Blueprint('admin', __name__)
 
-# Función simple para generar slug (nombre-url)
-def generate_slug(name):
-    # Elimina caracteres raros, pasa a minúsculas y reemplaza espacios por guiones
-    clean = re.sub(r'[^a-zA-Z0-9\s]', '', name).lower().strip()
-    return re.sub(r'[\s]+', '-', clean)
+CLAVE_MAESTRA = "agendapromaster2026"
 
-@admin.route('/super-admin')
-@login_required
-def index():
-    if current_user.id != 1:
-        return "Acceso denegado", 403
-    
-    # Mostrar todos los usuarios menos uno mismo
-    users = User.query.filter(User.id != current_user.id).order_by(User.id.desc()).all()
-    return render_template('admin/index.html', users=users)
-
-# Ruta para NUEVO PROFESIONAL (Formulario)
-@admin.route('/super-admin/nuevo', methods=['GET', 'POST'])
-@login_required
-def new_user():
-    if current_user.id != 1:
-        return "Acceso denegado", 403
-
+@admin.route('/super-admin', methods=['GET', 'POST'])
+def login_admin():
     if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        if not name or not email or not password:
-            flash('Todos los campos son obligatorios.')
-            return redirect(url_for('admin.new_user'))
+        if request.form.get('clave') == CLAVE_MAESTRA:
+            return redirect(url_for('admin.panel'))
+        flash('Clave incorrecta', 'danger')
+    return render_template_string("""
+    <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
+    <body class='bg-gray-900 flex items-center justify-center h-screen'>
+    <div class='bg-white p-8 rounded-xl shadow-xl w-96'>
+    <h1 class='text-2xl font-bold mb-4 text-center'>🔐 Super Admin</h1>
+    <form method='POST'>
+    <input type='password' name='clave' placeholder='Clave Maestra' required class='w-full border p-2 rounded mb-4'>
+    <button class='w-full bg-red-500 text-white py-2 rounded font-bold'>Acceder</button>
+    </form></div></body></html>
+    """)
 
-        # Verificar si email ya existe
-        existing = User.query.filter_by(email=email).first()
-        if existing:
-            flash('El email ya está registrado.')
-            return redirect(url_for('admin.new_user'))
+@admin.route('/super-admin/panel')
+def panel():
+    users = User.query.all()
+    return render_template_string("""
+    <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
+    <body class='bg-gray-100 p-8'>
+    <div class='max-w-5xl mx-auto'>
+        <div class='flex justify-between items-center mb-6'>
+            <h1 class='text-2xl font-bold'>Panel Super Admin</h1>
+            <a href='/' class='text-red-600 font-bold text-sm'>Salir</a>
+        </div>
+        <div class='bg-white shadow rounded-xl overflow-hidden'>
+        <table class='w-full text-sm'>
+        <thead class='bg-slate-800 text-white'><tr><th class='p-3 text-left'>Nombre</th><th class='p-3 text-left'>Email</th><th class='p-3'>Link Público</th><th class='p-3'>Resetear Clave</th></tr></thead>
+        <tbody>
+        {% for u in users %}
+        <tr class='border-b hover:bg-gray-50'>
+            <td class='p-3 font-medium'>{{ u.name }}</td>
+            <td class='p-3'>{{ u.email }}</td>
+            <td class='p-3 text-xs text-indigo-600'>/agenda/{{ u.slug }}</td>
+            <td class='p-3 text-center'><a href='{{ url_for('admin.reset_pwd', uid=u.id) }}' class='bg-yellow-100 text-yellow-700 px-2 py-1 rounded'>Resetear a 1234</a></td>
+        </tr>
+        {% endfor %}
+        </tbody></table></div>
+    </div>
+    </body></html>
+    """, users=users)
 
-        # Crear usuario
-        slug = generate_slug(name)
-        
-        # Asegurar slug único (si ya existe juan-perez, probar juan-perez-2)
-        if User.query.filter_by(slug=slug).first():
-            slug = slug + "-" + str(User.query.count())
-
-        new_professional = User(name=name, email=email, slug=slug)
-        new_professional.set_password(password)
-        
-        db.session.add(new_professional)
+@admin.route('/super-admin/reset/<int:uid>')
+def reset_pwd(uid):
+    u = User.query.get(uid)
+    if u:
+        u.set_password('1234')
         db.session.commit()
-        
-        flash(f'Profesional {name} creado exitosamente.')
-        return redirect(url_for('admin.index'))
-
-    return render_template('admin/create_user.html')
-
-# Resetar clave
-@admin.route('/super-admin/reset-password/<int:user_id>', methods=['POST'])
-@login_required
-def reset_password(user_id):
-    if current_user.id != 1:
-        return "Acceso denegado", 403
-    user = User.query.get_or_404(user_id)
-    new_pass = 'cliente123'
-    user.set_password(new_pass)
-    db.session.commit()
-    flash(f'Password de {user.name} reseteado a: {new_pass}')
-    return redirect(url_for('admin.index'))
-
-# Ruta de limpieza (Mover o borrar después de usar)
-@admin.route('/factory-reset')
-def factory_reset():
-    if os.environ.get('RESET_DB') != 'true':
-        return "<h1>Acceso Denegado</h1>", 403
-    try:
-        db.session.execute(text('TRUNCATE TABLE appointments, available_days, users RESTART IDENTITY CASCADE'))
-        db.session.commit()
-        admin = User(name='Admin', email='admin@admin.com', slug='admin')
-        admin.set_password('admin')
-        db.session.add(admin)
-        db.session.commit()
-        return "OK"
-    except Exception as e:
-        return str(e)
+        flash(f'Clave de {u.name} reseteada a: 1234', 'success')
+    return redirect(url_for('admin.panel'))
