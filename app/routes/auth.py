@@ -12,6 +12,20 @@ HTML_LOGIN = """
 <body class="bg-slate-100 min-h-screen flex items-center justify-center">
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
 <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
+
+<!-- MOSTRAR ERRORES AQUÍ -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="mb-4">
+        {% for category, message in messages %}
+        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded">
+            <p>{{ message }}</p>
+        </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
 <form method="POST" autocomplete="off">
 <div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"></div>
 <div class="mb-6"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
@@ -26,6 +40,15 @@ HTML_REGISTER = """
 <body class="bg-slate-100 min-h-screen flex items-center justify-center">
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
 <h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="mb-4">
+        {% for category, message in messages %}
+        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded"><p>{{ message }}</p></div>
+        {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
 <form method="POST" autocomplete="off">
 <div class="mb-4"><label class="block mb-1">Nombre</label><input type="text" name="name" required class="w-full border p-2 rounded"></div>
 <div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off"></div>
@@ -46,7 +69,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('dashboard.index'))
-        flash('Credenciales incorrectas.', 'danger')
+        flash('Credenciales incorrectas. Verifica email y clave.', 'danger')
     return render_template_string(HTML_LOGIN)
 
 @auth.route('/register', methods=['GET', 'POST'])
