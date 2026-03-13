@@ -106,7 +106,7 @@ def get_slots(slug, date_str):
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
-# --- CONFIRMACIÓN DE PAGO (SEGURA) ---
+# --- CONFIRMACIÓN DE PAGO (SOLO WHATSAPP) ---
 @public.route('/pago/exito')
 def pago_exito():
     ref = request.args.get('external_reference')
@@ -119,12 +119,13 @@ def pago_exito():
             if apt and apt.status == 'pendiente':
                 apt.status = 'reservado'
                 db.session.commit()
-            
             if apt:
                 prof = User.query.get(apt.professional_id)
         except: pass
 
     if apt and prof:
+        # Mensaje para WhatsApp
+        msg = f"Hola! Confirmé mi turno con {{ prof.name }} para el {{ apt.date.strftime('%d/%m') }} a las {{ apt.time.strftime('%H:%M') }}."
         return render_template_string("""
         <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
         <body class='bg-green-50 min-h-screen flex items-center justify-center p-4'>
@@ -132,15 +133,22 @@ def pago_exito():
             <div class="text-green-500 text-6xl mb-4">✓</div>
             <h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Pago Confirmado!</h1>
             <p class='text-gray-500 mb-6'>Tu turno ha sido reservado.</p>
+            
             <div class="bg-gray-100 p-4 rounded-lg text-left mb-6">
                 <p class="text-sm"><b>Profesional:</b> {{ prof.name }}</p>
                 <p class="text-sm"><b>Fecha:</b> {{ apt.date.strftime('%d/%m/%Y') }}</p>
                 <p class="text-sm"><b>Hora:</b> {{ apt.time.strftime('%H:%M') }}</p>
             </div>
-            <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block w-full bg-indigo-600 text-white py-2 rounded font-bold">Volver a la Agenda</a>
+
+            <!-- BOTÓN WHATSAPP -->
+            <a href="https://wa.me/?text={{ msg }}" target="_blank" class="block w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hover:bg-green-600">
+                📲 Envíate la información del turno!!!
+            </a>
+
+            <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-indigo-600 font-bold text-sm">Volver a la Agenda</a>
         </div>
         </body></html>
-        """, apt=apt, prof=prof)
+        """, apt=apt, prof=prof, msg=msg)
 
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
