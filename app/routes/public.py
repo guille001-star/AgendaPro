@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+﻿from flask import Blueprint, render_template, render_template_string, request, redirect, url_for, flash, jsonify
 from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
@@ -124,7 +124,6 @@ def pago_exito():
                 prof = User.query.get(apt.professional_id)
         except: pass
 
-    # Si tenemos datos, mostramos la pantalla bonita
     if apt and prof:
         return render_template_string("""
         <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
@@ -143,7 +142,6 @@ def pago_exito():
         </body></html>
         """, apt=apt, prof=prof)
 
-    # Si faltan datos, pantalla genérica
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
 
