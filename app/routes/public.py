@@ -41,7 +41,6 @@ def agenda(slug):
             return redirect(url_for('public.agenda', slug=slug))
 
         requiere_pago = professional.appointment_price and professional.appointment_price > 0 and professional.mp_access_token
-
         status = 'pendiente' if requiere_pago else 'reservado'
         
         new_apt = Appointment(
@@ -78,10 +77,10 @@ def agenda(slug):
                 if pay_url:
                     return redirect(pay_url)
                 else:
-                    flash('Error al generar link de pago.', 'danger')
+                    flash('Error al generar link.', 'danger')
                     db.session.delete(new_apt); db.session.commit()
             except Exception as e:
-                flash(f'Error MP: {str(e)}', 'danger')
+                flash(f'Error: {str(e)}', 'danger')
                 db.session.delete(new_apt); db.session.commit()
         
         flash('¡Turno reservado!', 'success')
@@ -115,26 +114,49 @@ def get_slots(slug, date_str):
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
-# --- RETORNO MERCADO PAGO (MEJORADO) ---
+# --- CONFIRMACIÓN DE PAGO (NUEVO) ---
 @public.route('/pago/exito')
 def pago_exito():
     ref = request.args.get('external_reference')
+    appointment = None
+    
     if ref:
         apt = Appointment.query.get(int(ref))
         if apt and apt.status == 'pendiente':
             apt.status = 'reservado'
             db.session.commit()
+            appointment = apt
+
+    if appointment:
+        professional = User.query.get(appointment.professional_id)
+        # Renderizar página especial de confirmación
+        return render_template_string("""
+        <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
+        <body class='bg-green-50 min-h-screen flex items-center justify-center p-4'>
+        <div class='bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center'>
+            <div class="text-green-500 text-6xl mb-4">✓</div>
+            <h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Pago Confirmado!</h1>
+            <p class='text-gray-500 mb-6'>Tu turno ha sido reservado exitosamente.</p>
             
-            # REDIRIGIR A LA AGENDA DEL PROFESIONAL
-            professional = User.query.get(apt.professional_id)
-            if professional:
-                flash('¡Pago confirmado! Su turno está reservado.', 'success')
-                return redirect(url_for('public.agenda', slug=professional.slug))
-    
+            <div class="bg-gray-100 p-4 rounded-lg text-left mb-6">
+                <p class="text-sm text-gray-600">Profesional: <span class="font-bold text-gray-800">{{ prof.name }}</span></p>
+                <p class="text-sm text-gray-600 mt-2">Fecha: <span class="font-bold text-gray-800">{{ apt.date.strftime('%d/%m/%Y') }}</span></p>
+                <p class="text-sm text-gray-600 mt-2">Hora: <span class="font-bold text-gray-800">{{ apt.time.strftime('%H:%M') }}</span></p>
+            </div>
+
+            <div class="flex gap-2">
+                <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Turno+con+{{ prof.name }}&dates={{ apt.date.strftime('%Y%m%d') }}/{{ apt.date.strftime('%Y%m%d') }}&details=Turno+confirmado" target="_blank" class="flex-1 bg-blue-100 text-blue-700 font-bold py-2 rounded hover:bg-blue-200 text-sm">Agregar Calendario</a>
+                <a href="https://wa.me/?text=Hola!+Mi+turno+es+el+{{ apt.date.strftime('%d/%m') }}+a+las+{{ apt.time.strftime('%H:%M') }}" target="_blank" class="flex-1 bg-green-100 text-green-700 font-bold py-2 rounded hover:bg-green-200 text-sm">WhatsApp</a>
+            </div>
+            <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-center text-sm text-gray-400 mt-6">Volver a la agenda</a>
+        </div>
+        </body></html>
+        """, apt=appointment, prof=professional)
+
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
 
 @public.route('/pago/error')
 def pago_error():
-    flash('El pago fue rechazado. Intente nuevamente.', 'danger')
+    flash('El pago fue rechazado.', 'danger')
     return redirect(url_for('public.home'))
