@@ -54,7 +54,6 @@ def agenda(slug):
             try:
                 sdk = mercadopago.SDK(professional.mp_access_token) 
                 base_url = request.host_url.rstrip('/')
-                
                 preference_data = {
                     "items": [{
                         "title": f"Turno {professional.name} - {apt_date}",
@@ -70,15 +69,11 @@ def agenda(slug):
                     "auto_return": "approved",
                     "external_reference": str(new_apt.id)
                 }
-                
                 pref_response = sdk.preference().create(preference_data)
                 pay_url = pref_response["response"].get("init_point") or pref_response["response"].get("sandbox_init_point")
-                
-                if pay_url:
-                    return redirect(pay_url)
-                else:
-                    flash('Error al generar link.', 'danger')
-                    db.session.delete(new_apt); db.session.commit()
+                if pay_url: return redirect(pay_url)
+                flash('Error MP.', 'danger')
+                db.session.delete(new_apt); db.session.commit()
             except Exception as e:
                 flash(f'Error: {str(e)}', 'danger')
                 db.session.delete(new_apt); db.session.commit()
@@ -98,14 +93,11 @@ def get_slots(slug, date_str):
     except: return jsonify({'error': 'Fecha'}), 400
     day = AvailableDay.query.filter_by(professional_id=professional.id, date=d).first()
     if not day: return jsonify({'message': 'No habilitado.'})
-    
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
-    
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
-    
     slots = []
     curr = datetime.combine(d, start)
     end_dt = datetime.combine(d, end)
@@ -114,45 +106,44 @@ def get_slots(slug, date_str):
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
-# --- CONFIRMACIÓN DE PAGO (NUEVO) ---
+# --- CONFIRMACIÓN DE PAGO (SEGURA) ---
 @public.route('/pago/exito')
 def pago_exito():
     ref = request.args.get('external_reference')
-    appointment = None
+    apt = None
+    prof = None
     
     if ref:
-        apt = Appointment.query.get(int(ref))
-        if apt and apt.status == 'pendiente':
-            apt.status = 'reservado'
-            db.session.commit()
-            appointment = apt
+        try:
+            apt = Appointment.query.get(int(ref))
+            if apt and apt.status == 'pendiente':
+                apt.status = 'reservado'
+                db.session.commit()
+            
+            if apt:
+                prof = User.query.get(apt.professional_id)
+        except: pass
 
-    if appointment:
-        professional = User.query.get(appointment.professional_id)
-        # Renderizar página especial de confirmación
+    # Si tenemos datos, mostramos la pantalla bonita
+    if apt and prof:
         return render_template_string("""
         <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
         <body class='bg-green-50 min-h-screen flex items-center justify-center p-4'>
         <div class='bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center'>
             <div class="text-green-500 text-6xl mb-4">✓</div>
             <h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Pago Confirmado!</h1>
-            <p class='text-gray-500 mb-6'>Tu turno ha sido reservado exitosamente.</p>
-            
+            <p class='text-gray-500 mb-6'>Tu turno ha sido reservado.</p>
             <div class="bg-gray-100 p-4 rounded-lg text-left mb-6">
-                <p class="text-sm text-gray-600">Profesional: <span class="font-bold text-gray-800">{{ prof.name }}</span></p>
-                <p class="text-sm text-gray-600 mt-2">Fecha: <span class="font-bold text-gray-800">{{ apt.date.strftime('%d/%m/%Y') }}</span></p>
-                <p class="text-sm text-gray-600 mt-2">Hora: <span class="font-bold text-gray-800">{{ apt.time.strftime('%H:%M') }}</span></p>
+                <p class="text-sm"><b>Profesional:</b> {{ prof.name }}</p>
+                <p class="text-sm"><b>Fecha:</b> {{ apt.date.strftime('%d/%m/%Y') }}</p>
+                <p class="text-sm"><b>Hora:</b> {{ apt.time.strftime('%H:%M') }}</p>
             </div>
-
-            <div class="flex gap-2">
-                <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Turno+con+{{ prof.name }}&dates={{ apt.date.strftime('%Y%m%d') }}/{{ apt.date.strftime('%Y%m%d') }}&details=Turno+confirmado" target="_blank" class="flex-1 bg-blue-100 text-blue-700 font-bold py-2 rounded hover:bg-blue-200 text-sm">Agregar Calendario</a>
-                <a href="https://wa.me/?text=Hola!+Mi+turno+es+el+{{ apt.date.strftime('%d/%m') }}+a+las+{{ apt.time.strftime('%H:%M') }}" target="_blank" class="flex-1 bg-green-100 text-green-700 font-bold py-2 rounded hover:bg-green-200 text-sm">WhatsApp</a>
-            </div>
-            <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-center text-sm text-gray-400 mt-6">Volver a la agenda</a>
+            <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block w-full bg-indigo-600 text-white py-2 rounded font-bold">Volver a la Agenda</a>
         </div>
         </body></html>
-        """, apt=appointment, prof=professional)
+        """, apt=apt, prof=prof)
 
+    # Si faltan datos, pantalla genérica
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
 
