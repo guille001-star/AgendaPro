@@ -83,19 +83,26 @@ def export_csv():
     out.seek(0)
     return Response(out, mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=agenda.csv'})
 
-# --- CONFIGURACIÓN DE PAGOS (SIMPLE) ---
+# --- CONFIGURACIÓN DE PAGOS (CORREGIDO) ---
 @dashboard.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
     if request.method == 'POST':
         price = request.form.get('price', 0, type=float)
-        token = request.form.get('token')
-        public_key = request.form.get('public_key')
+        token = request.form.get('token', '').strip() # Obtenemos y limpiamos espacios
+        public_key = request.form.get('public_key', '').strip()
+        
         current_user.appointment_price = price
-        current_user.mp_public_key = public_key
-        if token: current_user.mp_access_token = token
+        current_user.mp_public_key = public_key if public_key else None
+        
+        # LÓGICA DE BORRADO: Si el campo está vacío, borramos el token
+        if token:
+            current_user.mp_access_token = token
+        else:
+            current_user.mp_access_token = None # Esto permite borrar el token viejo
+        
         db.session.commit()
-        flash('Configuracion guardada.', 'success')
+        flash('Configuracion actualizada.', 'success')
         return redirect(url_for('dashboard.settings'))
 
     return render_template_string("""
@@ -103,10 +110,11 @@ def settings():
     <body class='bg-gray-100 p-8'>
     <div class='max-w-xl mx-auto bg-white p-6 rounded-xl shadow'>
     <h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2>
+    <p class='text-xs text-gray-500 mb-4'>Deja los campos de token vacíos para desactivar los pagos online.</p>
     <form method='POST'>
     <div class='mb-4'><label>Precio ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded'></div>
-    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'></div>
-    <div class='mb-4'><label>Public Key</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
+    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='Dejar vacío para borrar' value='{{ current_user.mp_access_token or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
+    <div class='mb-4'><label>Public Key</label><input type='text' name='public_key' placeholder='Dejar vacío para borrar' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
     <button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button>
     </form>
     <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a>
