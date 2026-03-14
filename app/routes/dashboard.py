@@ -36,7 +36,7 @@ def toggle_day(date_str):
         d = datetime.strptime(date_str, '%Y-%m-%d').date()
         ex = AvailableDay.query.filter_by(professional_id=current_user.id, date=d).first()
         if ex: db.session.delete(ex); act='removed'
-        else: 
+        else:
             db.session.add(AvailableDay(professional_id=current_user.id, date=d, start_time=datetime.strptime('09:00','%H:%M').time(), end_time=datetime.strptime('18:00','%H:%M').time(), slot_duration=30))
             act='added'
         db.session.commit()
@@ -91,14 +91,13 @@ def settings():
         price = request.form.get('price', 0, type=float)
         token = request.form.get('token')
         public_key = request.form.get('public_key')
-        
         current_user.appointment_price = price
         current_user.mp_public_key = public_key
         if token: current_user.mp_access_token = token # Se encripta automáticamente
         db.session.commit()
         flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
-        
+
     return render_template_string("""
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
@@ -115,21 +114,17 @@ def settings():
     </div></body></html>
     """)
 
-# --- RUTA DE PRUEBA DE SEGURIDAD (ELIMINAR DESPUES) ---
+# --- RUTA DE PRUEBA DE ENCRIPTACIÓN ---
 @dashboard.route('/test-encryption')
 @login_required
 def test_encryption():
-    # 1. Leemos el valor desencriptado (lo que ve el usuario)
     readable = current_user.mp_access_token
-    
-    # 2. Leemos el valor RAW de la base de datos (lo que ve un hacker)
     raw_value = current_user._mp_access_token
-    
     return f"""
     <h1>Prueba de Encriptación</h1>
     <p><b>Tu token original (desencriptado):</b> {readable}</p>
     <hr>
     <p><b>Lo que hay en la base de datos (encriptado):</b> {raw_value}</p>
-    <p><i>Si el de arriba dice 'TEST-TOKEN-SECRETO-12345' y el de abajo es un chorizo de letras, ¡FUNCIONA!</i></p>
+    <p><i>Si arriba ves tu token y abajo un chorizo de letras, ¡FUNCIONA!</i></p>
     <a href="/dashboard">Volver</a>
     """
