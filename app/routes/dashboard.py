@@ -83,7 +83,7 @@ def export_csv():
     out.seek(0)
     return Response(out, mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=agenda.csv'})
 
-# --- CONFIGURACIÓN DE PAGOS (ESTABLE) ---
+# --- CONFIGURACIÓN DE PAGOS (CORREGIDO) ---
 @dashboard.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
@@ -98,6 +98,7 @@ def settings():
         flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
 
+    # Mostramos el valor REAL desencriptado en el input
     return render_template_string("""
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
@@ -105,7 +106,14 @@ def settings():
     <h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2>
     <form method='POST'>
     <div class='mb-4'><label>Precio ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded'></div>
-    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'></div>
+    
+    <!-- AQUÍ ESTABA EL ERROR: Agregado el value -->
+    <div class='mb-4'>
+        <label>Access Token</label>
+        <input type='text' name='token' value='{{ current_user.mp_access_token or "" }}' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'>
+        <p class='text-xs text-gray-400 mt-1'>Tu token se muestra desencriptado por seguridad.</p>
+    </div>
+    
     <div class='mb-4'><label>Public Key</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
     <button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button>
     </form>
