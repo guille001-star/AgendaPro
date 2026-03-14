@@ -93,7 +93,7 @@ def settings():
         public_key = request.form.get('public_key')
         current_user.appointment_price = price
         current_user.mp_public_key = public_key
-        if token: current_user.mp_access_token = token # Se encripta automáticamente
+        if token: current_user.mp_access_token = token
         db.session.commit()
         flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
@@ -105,8 +105,7 @@ def settings():
     <h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2>
     <form method='POST'>
     <div class='mb-4'><label>Precio ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded'></div>
-    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'>
-    <p class='text-xs text-gray-400 mt-1'>Seguro y encriptado.</p></div>
+    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'></div>
     <div class='mb-4'><label>Public Key</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
     <button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button>
     </form>
@@ -114,17 +113,11 @@ def settings():
     </div></body></html>
     """)
 
-# --- RUTA DE PRUEBA DE ENCRIPTACIÓN ---
+# --- RUTA DE PRUEBA (SIMPLIFICADA) ---
 @dashboard.route('/test-encryption')
 @login_required
 def test_encryption():
     readable = current_user.mp_access_token
     raw_value = current_user._mp_access_token
-    return f"""
-    <h1>Prueba de Encriptación</h1>
-    <p><b>Tu token original (desencriptado):</b> {readable}</p>
-    <hr>
-    <p><b>Lo que hay en la base de datos (encriptado):</b> {raw_value}</p>
-    <p><i>Si arriba ves tu token y abajo un chorizo de letras, ¡FUNCIONA!</i></p>
-    <a href="/dashboard">Volver</a>
-    """
+    # Devolvemos texto plano para evitar errores de HTML
+    return "Token Leído: " + str(readable) + " | Token Encriptado (Raw): " + str(raw_value)
