@@ -1,7 +1,7 @@
 ﻿from flask import Blueprint, render_template_string, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db
+from app import db, limiter # Importamos el limitador
 from app.models.user import User
 import uuid
 
@@ -12,8 +12,6 @@ HTML_LOGIN = """
 <body class="bg-slate-100 min-h-screen flex items-center justify-center">
 <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
 <h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
-
-<!-- MOSTRAR ERRORES AQUÍ -->
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
         <div class="mb-4">
@@ -25,7 +23,6 @@ HTML_LOGIN = """
         </div>
     {% endif %}
 {% endwith %}
-
 <form method="POST" autocomplete="off">
 <div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"></div>
 <div class="mb-6"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
@@ -61,6 +58,8 @@ HTML_REGISTER = """
 """
 
 @auth.route('/login', methods=['GET', 'POST'])
+# LÍMITE: Máximo 5 intentos por minuto por IP
+@limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
