@@ -114,3 +114,22 @@ def settings():
     <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a>
     </div></body></html>
     """)
+
+# --- RUTA DE PRUEBA DE SEGURIDAD (ELIMINAR DESPUES) ---
+@dashboard.route('/test-encryption')
+@login_required
+def test_encryption():
+    # 1. Leemos el valor desencriptado (lo que ve el usuario)
+    readable = current_user.mp_access_token
+    
+    # 2. Leemos el valor RAW de la base de datos (lo que ve un hacker)
+    raw_value = current_user._mp_access_token
+    
+    return f"""
+    <h1>Prueba de Encriptación</h1>
+    <p><b>Tu token original (desencriptado):</b> {readable}</p>
+    <hr>
+    <p><b>Lo que hay en la base de datos (encriptado):</b> {raw_value}</p>
+    <p><i>Si el de arriba dice 'TEST-TOKEN-SECRETO-12345' y el de abajo es un chorizo de letras, ¡FUNCIONA!</i></p>
+    <a href="/dashboard">Volver</a>
+    """
