@@ -10,9 +10,11 @@ import json
 from datetime import datetime
 
 admin = Blueprint('admin', __name__)
+
+# CLAVE MAESTRA
 CLAVE_MAESTRA = os.environ.get('MASTER_KEY', 'dev-local-key-123')
 
-# --- LOGIN ADMIN ---
+# --- 1. LOGIN ADMIN ---
 @admin.route('/super-admin', methods=['GET', 'POST'])
 def login_admin():
     if request.method == 'POST':
@@ -30,7 +32,7 @@ def login_admin():
     </form></div></body></html>
     """)
 
-# --- PANEL ---
+# --- 2. PANEL PRINCIPAL ---
 @admin.route('/super-admin/panel', methods=['GET', 'POST'])
 def panel():
     if request.method == 'POST':
@@ -54,29 +56,30 @@ def panel():
         <div class="flex justify-between items-center mb-6">
             <h1 class='text-2xl font-bold'>Panel Super Admin</h1>
             <div class="flex gap-2">
-                <a href="{{ url_for('admin.backup') }}" class="bg-green-600 text-white px-4 py-2 rounded font-bold text-sm">⬇️ Backup DB</a>
+                <a href="{{ url_for('admin.backup') }}" class="bg-green-600 text-white px-4 py-2 rounded font-bold text-sm">⬇️ Backup</a>
                 <a href="/" class="text-red-600 font-bold text-sm">Salir</a>
             </div>
         </div>
-        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for cat, msg in messages %}
             <div class="bg-{{ 'green' if cat=='success' else 'red' }}-100 text-{{ 'green' if cat=='success' else 'red' }}-700 p-3 rounded mb-4">{{ msg }}</div>
             {% endfor %}
         {% endwith %}
-
         <div class="bg-white p-4 rounded-xl shadow mb-6">
-            <h2 class="font-bold mb-2">Agregar Nuevo</h2>
+            <h2 class="font-bold mb-2">Agregar Nuevo Profesional</h2>
             <form method="POST" class="flex gap-2">
                 <input type="text" name="name" placeholder="Nombre" required class="flex-1 border p-2 rounded">
                 <input type="email" name="email" placeholder="Email" required class="flex-1 border p-2 rounded">
                 <button class="bg-indigo-600 text-white px-4 py-2 rounded font-bold">Crear</button>
             </form>
         </div>
-
         <div class="bg-white rounded-xl shadow overflow-x-auto">
         <table class='w-full text-sm'>
-        <thead class='bg-slate-800 text-white'><tr><th class='p-3 text-left'>Profesional</th><th class='p-3 text-left'>Email</th><th class='p-3 text-center'>Acciones</th></tr></thead>
+        <thead class='bg-slate-800 text-white'><tr>
+            <th class='p-3 text-left'>Nombre</th>
+            <th class='p-3 text-left'>Email</th>
+            <th class='p-3 text-center'>Acciones</th>
+        </tr></thead>
         <tbody>
         {% for u in users %}
         <tr class='border-b hover:bg-gray-50'>
@@ -84,8 +87,8 @@ def panel():
             <td class='p-3'>{{ u.email }}</td>
             <td class='p-3 text-center space-x-1 whitespace-nowrap'>
                 <a href='{{ url_for('admin.view_user', uid=u.id) }}' class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Detalles</a>
+                <a href='{{ url_for('admin.reset_pwd', uid=u.id) }}' class="bg-yellow-500 text-white px-2 py-1 rounded text-xs">Resetear Clave</a>
                 <a href='{{ url_for('admin.login_as', uid=u.id) }}' class="bg-purple-500 text-white px-2 py-1 rounded text-xs">Entrar</a>
-                <a href='{{ url_for('public.agenda', slug=u.slug) }}' target="_blank" class="bg-green-500 text-white px-2 py-1 rounded text-xs">Link</a>
             </td>
         </tr>
         {% endfor %}
@@ -94,7 +97,7 @@ def panel():
     </body></html>
     """, users=users)
 
-# --- DETALLES USUARIO ---
+# --- 3. VER DETALLES ---
 @admin.route('/super-admin/user/<int:uid>')
 def view_user(uid):
     u = User.query.get_or_404(uid)
@@ -103,29 +106,27 @@ def view_user(uid):
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
     <div class='max-w-2xl mx-auto'>
-        <a href='{{ url_for('admin.panel') }}' class="text-indigo-600 text-sm">← Volver</a>
+        <a href='{{ url_for('admin.panel') }}' class="text-indigo-600 text-sm">← Volver al listado</a>
         <div class="bg-white rounded-xl shadow p-6 mt-4">
             <h1 class='text-2xl font-bold mb-4'>{{ u.name }}</h1>
             <div class="space-y-2 text-sm">
                 <p><b>Email:</b> {{ u.email }}</p>
-                <p><b>Clave:</b> ****** <a href='{{ url_for('admin.reset_pwd', uid=u.id) }}' class="text-yellow-600">(Resetear a 1234)</a></p>
+                <p><b>Slug:</b> {{ u.slug }}</p>
+                <p><b>Clave:</b> ****** <a href='{{ url_for('admin.reset_pwd', uid=u.id) }}' class="text-yellow-600 font-bold">(Resetear a 1234)</a></p>
                 <p><b>Total Turnos:</b> {{ total }}</p>
             </div>
             <hr class="my-4">
-            <h2 class="font-bold mb-2">Links</h2>
-            <div class="space-y-2">
-                <a href='{{ url_for('public.agenda', slug=u.slug) }}' target="_blank" class="block bg-green-100 text-green-800 p-2 rounded text-xs">Link Público: /agenda/{{ u.slug }}</a>
-            </div>
-            <hr class="my-4">
-            <div class="flex gap-2">
+             <div class="flex gap-2">
                 <a href='{{ url_for('admin.edit_user', uid=u.id) }}' class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold">Editar Datos</a>
                 <a href='{{ url_for('admin.login_as', uid=u.id) }}' class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold">Entrar como él</a>
+                <a href='{{ url_for('public.agenda', slug=u.slug) }}' target="_blank" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">Ver Agenda</a>
             </div>
         </div>
     </div>
     </body></html>
     """, u=u, total=total_turnos)
 
+# --- 4. EDITAR USUARIO ---
 @admin.route('/super-admin/edit/<int:uid>', methods=['GET', 'POST'])
 def edit_user(uid):
     u = User.query.get_or_404(uid)
@@ -150,6 +151,7 @@ def edit_user(uid):
     </body></html>
     """, u=u)
 
+# --- 5. ENTRAR COMO USUARIO ---
 @admin.route('/super-admin/login-as/<int:uid>')
 def login_as(uid):
     u = User.query.get_or_404(uid)
@@ -157,6 +159,7 @@ def login_as(uid):
     flash(f'Has entrado como {u.name}', 'success')
     return redirect(url_for('dashboard.index'))
 
+# --- 6. RESETEAR CLAVE ---
 @admin.route('/super-admin/reset/<int:uid>')
 def reset_pwd(uid):
     u = User.query.get_or_404(uid)
@@ -165,45 +168,19 @@ def reset_pwd(uid):
     flash(f'Clave de {u.name} reseteada a: 1234', 'success')
     return redirect(url_for('admin.view_user', uid=uid))
 
-# --- BACKUP (DESCARGA JSON) ---
+# --- 7. BACKUP ---
 @admin.route('/super-admin/backup')
 def backup():
     data = {}
-    
-    # Respaldar Usuarios
     users = User.query.all()
-    data['users'] = []
-    for u in users:
-        data['users'].append({
-            'id': u.id, 'name': u.name, 'email': u.email, 'slug': u.slug,
-            'price': u.appointment_price, 'mp_public_key': u.mp_public_key
-        })
-
-    # Respaldar Turnos
+    data['users'] = [{'id': u.id, 'name': u.name, 'email': u.email, 'slug': u.slug, 'price': u.appointment_price} for u in users]
+    
     appointments = Appointment.query.all()
-    data['appointments'] = []
-    for a in appointments:
-        data['appointments'].append({
-            'id': a.id, 'pro_id': a.professional_id, 
-            'client': a.client_name, 'email': a.client_email, 'phone': a.client_phone,
-            'date': str(a.date), 'time': str(a.time), 'status': a.status
-        })
-
-    # Respaldar Disponibilidad
+    data['appointments'] = [{'client': a.client_name, 'email': a.client_email, 'date': str(a.date), 'status': a.status} for a in appointments]
+    
     days = AvailableDay.query.all()
-    data['available_days'] = []
-    for d in days:
-        data['available_days'].append({
-            'id': d.id, 'pro_id': d.professional_id,
-            'date': str(d.date), 'start': str(d.start_time), 
-            'end': str(d.end_time), 'duration': d.slot_duration
-        })
+    data['available_days'] = [{'date': str(d.date), 'start': str(d.start_time), 'end': str(d.end_time)} for d in days]
 
     payload = json.dumps(data, indent=4)
     filename = f"backup_agendapro_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
-    
-    return Response(
-        payload,
-        mimetype='application/json',
-        headers={'Content-Disposition': f'attachment;filename={filename}'}
-    )
+    return Response(payload, mimetype='application/json', headers={'Content-Disposition': f'attachment;filename={filename}'})
