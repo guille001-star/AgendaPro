@@ -56,3 +56,9 @@ def create_app(config_class=Config):
     app.register_blueprint(admin, url_prefix='/admin')
 
     return app
+
+# Migración segura para custom_slots
+try:
+    db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS custom_slots JSONB'))
+    db.session.commit()
+except: pass
