@@ -1,7 +1,7 @@
 ﻿{% extends "base.html" %}
 {% block content %}
 <div class="bg-slate-800 text-white py-12 text-center">
-    <h1 class="text-4xl font-bold">Agenda de {{ professional.name }}</h1>
+    <h1 class="text-4xl font-bold">{{ professional.name }}</h1>
     <p class="text-slate-300 mt-2">Selecciona un día para ver horarios disponibles.</p>
 </div>
 <div class="container mx-auto p-6 grid md:grid-cols-3 gap-6">
@@ -17,8 +17,8 @@
     {% endfor %}
 </div>
 
-<!-- FORMULARIO OCULTO PARA RESERVA -->
-<form id="reserva-form" method="POST" class="hidden max-w-md mx-auto bg-white p-6 rounded-xl shadow">
+<!-- FORMULARIO OCULTO -->
+<form id="reserva-form" method="POST" class="hidden max-w-md mx-auto bg-white p-6 rounded-xl shadow mt-6">
     <input type="hidden" name="date" id="res-date">
     <input type="hidden" name="time_slot" id="res-time">
     <h2 class="text-xl font-bold mb-4">Reservar Turno</h2>
@@ -31,28 +31,23 @@
 </form>
 
 <script>
-    // Si viene fecha en URL (?d=2023-10-27), cargarla automáticamente
     const params = new URLSearchParams(window.location.search);
     const dateParam = params.get('d');
     if(dateParam) loadSlots(dateParam);
 
     function loadSlots(dateStr) {
-        // Mostrar formulario y cargar horarios
         document.getElementById('reserva-form').classList.remove('hidden');
         document.getElementById('res-date').value = dateStr;
         
         fetch(`/agenda/get-slots/{{ professional.slug }}/${dateStr}`)
         .then(r => r.json())
         .then(data => {
-            // Crear botones de horario
             const container = document.createElement('div');
             container.className = 'grid grid-cols-3 gap-2 mb-4';
             
             if(data.slots.length > 0){
                 data.slots.forEach(s => {
-                    // COMPATIBILIDAD: s puede ser string (modo viejo) o objeto (modo nuevo)
                     let timeStr = typeof s === 'string' ? s : s.time;
-                    
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.innerText = timeStr;
@@ -68,7 +63,6 @@
                 container.innerHTML = '<p class="col-span-3 text-center text-gray-400">Sin turnos.</p>';
             }
             
-            // Insertar antes del form
             const form = document.getElementById('reserva-form');
             form.parentNode.insertBefore(container, form);
         });

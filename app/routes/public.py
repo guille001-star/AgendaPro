@@ -5,7 +5,6 @@ from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import datetime, date, time as dt_time, timedelta
 import mercadopago
-import json
 
 public = Blueprint('public', __name__)
 
@@ -85,12 +84,12 @@ def agenda(slug):
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
     
-    # CORRECCIÓN: Extraer solo las fechas para la plantilla
+    # IMPORTANTE: Pasar solo las fechas, no los objetos completos
     enabled_dates = [d.date for d in enabled_days]
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (SEGURO) ---
+# --- API HORARIOS (MODO SIMPLE) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -104,22 +103,6 @@ def get_slots(slug, date_str):
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # INTENTAR MODO AVANZADO
-    try:
-        if day.custom_slots:
-            slots = []
-            raw_slots = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
-            
-            for s in raw_slots:
-                if s.get('public'):
-                    t = datetime.strptime(s['start'], '%H:%M').time()
-                    if t not in booked:
-                        slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
-            if slots: return jsonify({'slots': slots})
-    except Exception as e:
-        print(f"Error reading custom slots: {e}")
-
-    # MODO SIMPLE (FALLBACK)
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
