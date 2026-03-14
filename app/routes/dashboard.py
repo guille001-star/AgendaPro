@@ -83,7 +83,7 @@ def export_csv():
     out.seek(0)
     return Response(out, mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=agenda.csv'})
 
-# --- CONFIGURACIÓN DE PAGOS (CON GUÍA) ---
+# --- CONFIGURACIÓN DE PAGOS (SIMPLE) ---
 @dashboard.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
@@ -98,42 +98,17 @@ def settings():
         flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
 
-    # Mostramos guía visual
     return render_template_string("""
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
-    <div class='max-w-3xl mx-auto bg-white p-8 rounded-xl shadow'>
-        <h2 class='text-2xl font-bold mb-6 text-gray-800'>💳 Activar Cobros Online</h2>
-        
-        <!-- INSTRUCCIONES PASO A PASO -->
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-            <h3 class="font-bold text-blue-800 mb-2">¿Cómo consigo mis credenciales?</h3>
-            <ol class="list-decimal list-inside text-sm text-blue-900 space-y-2">
-                <li>Entra a <a href="https://www.mercadopago.com.ar/developers" target="_blank" class="text-blue-600 underline font-bold">Mercado Pago Developers</a> y logueate con tu cuenta.</li>
-                <li>Ve a <b>"Tu aplicación"</b> (o crea una si no tienes).</li>
-                <li>Copia el <b>Access Token</b> (empieza con APP_USR o TEST_).</li>
-                <li>Copia la <b>Public Key</b>.</li>
-                <li>Pégalos aquí abajo y guarda.</li>
-            </ol>
-            <p class="text-xs mt-3 text-blue-700"><b>Importante:</b> Para pruebas usa los que empiezan con TEST_. Para cobrar reales, los que empiezan con APP_USR.</p>
-        </div>
-
-        <form method='POST'>
-            <div class='mb-4'>
-                <label class='block font-bold mb-1'>Precio del Turno ($)</label>
-                <input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded' placeholder="Ej: 1500">
-            </div>
-            <div class='mb-4'>
-                <label class='block font-bold mb-1'>Access Token (Privado)</label>
-                <input type='text' name='token' value='{{ current_user.mp_access_token or "" }}' placeholder='TEST-xxxx...' class='w-full border p-2 rounded text-xs font-mono bg-gray-50'>
-            </div>
-            <div class='mb-6'>
-                <label class='block font-bold mb-1'>Public Key (Pública)</label>
-                <input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' placeholder='TEST-xxxx...' class='w-full border p-2 rounded text-xs font-mono bg-gray-50'>
-            </div>
-            <button class='w-full bg-indigo-600 text-white py-3 rounded font-bold hover:bg-indigo-700'>Guardar Cambios</button>
-        </form>
-        <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4 text-gray-500">Volver</a>
-    </div>
-    </body></html>
+    <div class='max-w-xl mx-auto bg-white p-6 rounded-xl shadow'>
+    <h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2>
+    <form method='POST'>
+    <div class='mb-4'><label>Precio ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded'></div>
+    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'></div>
+    <div class='mb-4'><label>Public Key</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
+    <button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button>
+    </form>
+    <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a>
+    </div></body></html>
     """)
