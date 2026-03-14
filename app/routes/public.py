@@ -84,7 +84,11 @@ def agenda(slug):
 
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
-    return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_days)
+    
+    # CORRECCIÓN: Extraer solo las fechas para la plantilla
+    enabled_dates = [d.date for d in enabled_days]
+    
+    return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
 # --- API HORARIOS (SEGURO) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
@@ -104,7 +108,6 @@ def get_slots(slug, date_str):
     try:
         if day.custom_slots:
             slots = []
-            # Asegurar que sea lista
             raw_slots = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
             
             for s in raw_slots:
@@ -114,8 +117,7 @@ def get_slots(slug, date_str):
                         slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
             if slots: return jsonify({'slots': slots})
     except Exception as e:
-        print(f"Error reading custom slots, falling back to simple: {e}")
-        # Si falla, continúa al modo simple
+        print(f"Error reading custom slots: {e}")
 
     # MODO SIMPLE (FALLBACK)
     start = day.start_time or dt_time(9,0)
@@ -149,16 +151,12 @@ def pago_exito():
                 <div class='bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center'>
                     <div class="text-green-500 text-6xl mb-4">✓</div>
                     <h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Pago Confirmado!</h1>
-                    <p class='text-gray-500 mb-6'>Tu turno ha sido reservado.</p>
                     <div class="bg-gray-100 p-4 rounded-lg text-left mb-6">
-                        <p class="text-sm"><b>Profesional:</b> {{ prof.name }}</p>
                         <p class="text-sm"><b>Fecha:</b> {{ apt.date.strftime('%d/%m/%Y') }}</p>
                         <p class="text-sm"><b>Hora:</b> {{ apt.time.strftime('%H:%M') }}</p>
                     </div>
-                    <a href="https://wa.me/?text={{ msg }}" target="_blank" class="block w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hover:bg-green-600">
-                        📲 Envíate la información del turno!!!
-                    </a>
-                    <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-indigo-600 font-bold text-sm">Volver a la Agenda</a>
+                    <a href="https://wa.me/?text={{ msg }}" target="_blank" class="block w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hover:bg-green-600">📲 Enviar a WhatsApp</a>
+                    <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-indigo-600 font-bold text-sm">Volver</a>
                 </div>
                 </body></html>
                 """, apt=apt, prof=prof, msg=msg)
