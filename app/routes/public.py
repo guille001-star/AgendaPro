@@ -5,6 +5,7 @@ from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
 from datetime import datetime, date, time as dt_time, timedelta
 import mercadopago
+import json
 
 public = Blueprint('public', __name__)
 
@@ -85,7 +86,7 @@ def agenda(slug):
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_days)
 
-# --- API HORARIOS INTELIGENTE (COMPATIBLE) ---
+# --- API HORARIOS (SEGURO) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -99,19 +100,24 @@ def get_slots(slug, date_str):
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # LÓGICA NUEVA: Si hay bloques personalizados
-    if day.custom_slots:
-        slots = []
-        for s in day.custom_slots:
-            # Solo mostrar si está marcado como público
-            if s.get('public'):
-                t = datetime.strptime(s['start'], '%H:%M').time()
-                if t not in booked:
-                    # Retornamos objeto para que el JS distinguisha
-                    slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
-        return jsonify({'slots': slots})
-    
-    # LÓGICA VIEJA (Simple) - Mantiene compatibilidad
+    # INTENTAR MODO AVANZADO
+    try:
+        if day.custom_slots:
+            slots = []
+            # Asegurar que sea lista
+            raw_slots = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
+            
+            for s in raw_slots:
+                if s.get('public'):
+                    t = datetime.strptime(s['start'], '%H:%M').time()
+                    if t not in booked:
+                        slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
+            if slots: return jsonify({'slots': slots})
+    except Exception as e:
+        print(f"Error reading custom slots, falling back to simple: {e}")
+        # Si falla, continúa al modo simple
+
+    # MODO SIMPLE (FALLBACK)
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
