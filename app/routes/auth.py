@@ -1,65 +1,13 @@
-﻿from flask import Blueprint, render_template_string, redirect, url_for, request, flash
+﻿from flask import Blueprint, render_template, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
-from app import db, limiter # Importamos el limitador
+from app import db
 from app.models.user import User
 import uuid
 
 auth = Blueprint('auth', __name__)
 
-HTML_LOGIN = """
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Login</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-slate-100 min-h-screen flex items-center justify-center">
-<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-<h2 class="text-2xl font-bold text-center mb-6">Iniciar Sesión</h2>
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="mb-4">
-        {% for category, message in messages %}
-        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded">
-            <p>{{ message }}</p>
-        </div>
-        {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
-<form method="POST" autocomplete="off">
-<div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"></div>
-<div class="mb-6"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
-<button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded font-bold">Entrar</button>
-</form>
-<p class="text-center text-sm mt-4">¿No tienes cuenta? <a href="{{ url_for('auth.register') }}" class="text-indigo-600">Crear Cuenta</a></p>
-</div></body></html>
-"""
-
-HTML_REGISTER = """
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Registro</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-slate-100 min-h-screen flex items-center justify-center">
-<div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-<h2 class="text-2xl font-bold text-center mb-6">Crear Cuenta</h2>
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <div class="mb-4">
-        {% for category, message in messages %}
-        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded"><p>{{ message }}</p></div>
-        {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
-<form method="POST" autocomplete="off">
-<div class="mb-4"><label class="block mb-1">Nombre</label><input type="text" name="name" required class="w-full border p-2 rounded"></div>
-<div class="mb-4"><label class="block mb-1">Email</label><input type="email" name="email" required class="w-full border p-2 rounded" autocomplete="off"></div>
-<div class="mb-4"><label class="block mb-1">Contraseña</label><input type="password" name="password" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
-<div class="mb-6"><label class="block mb-1">Confirmar</label><input type="password" name="confirm" required class="w-full border p-2 rounded" autocomplete="new-password"></div>
-<button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded font-bold">Registrarse</button>
-</form>
-<p class="text-center text-sm mt-4">¿Ya tienes cuenta? <a href="{{ url_for('auth.login') }}" class="text-indigo-600">Iniciar Sesión</a></p>
-</div></body></html>
-"""
-
 @auth.route('/login', methods=['GET', 'POST'])
-# LÍMITE: Máximo 5 intentos por minuto por IP
-@limiter.limit("5 per minute")
 def login():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -68,8 +16,8 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             return redirect(url_for('dashboard.index'))
-        flash('Credenciales incorrectas. Verifica email y clave.', 'danger')
-    return render_template_string(HTML_LOGIN)
+        flash('Credenciales incorrectas.', 'danger')
+    return render_template('auth/login.html')
 
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
@@ -79,13 +27,13 @@ def register():
         password = request.form.get('password')
         confirm = request.form.get('confirm')
         if password != confirm: flash('No coinciden', 'danger'); return redirect(url_for('auth.register'))
-        if User.query.filter_by(email=email).first(): flash('Existe', 'danger'); return redirect(url_for('auth.register'))
+        if User.query.filter_by(email=email).first(): flash('Ya existe cuenta.', 'danger'); return redirect(url_for('auth.register'))
         new_user = User(email=email, name=name, slug=uuid.uuid4().hex[:8])
         new_user.set_password(password)
         db.session.add(new_user); db.session.commit()
         flash('Cuenta creada.', 'success')
         return redirect(url_for('auth.login'))
-    return render_template_string(HTML_REGISTER)
+    return render_template('auth/register.html')
 
 @auth.route('/logout')
 @login_required
@@ -104,4 +52,4 @@ def change_password():
             flash('Actualizada.', 'success')
             return redirect(url_for('dashboard.index'))
         flash('Incorrecta.', 'danger')
-    return render_template_string("""<!DOCTYPE html><html><head><meta charset="UTF-8"><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-slate-100 min-h-screen flex items-center justify-center"><div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md"><h2 class="text-xl font-bold mb-4">Cambiar Contraseña</h2><form method="POST"><div class="mb-4"><label>Actual</label><input type="password" name="old_password" required class="w-full border p-2 rounded"></div><div class="mb-4"><label>Nueva</label><input type="password" name="new_password" required class="w-full border p-2 rounded"></div><button type="submit" class="w-full bg-slate-700 text-white py-2 rounded font-bold">Actualizar</button></form><a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a></div></body></html>""")
+    return render_template('auth/change_password.html')

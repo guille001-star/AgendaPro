@@ -9,4 +9,3 @@ gunicorn==21.2.0
 Flask-Mail==0.9.1
 mercadopago
 cryptography
-Flask-Limiter
