@@ -1,23 +1,22 @@
-﻿from flask import Blueprint, render_template_string, request, flash, redirect, url_for
+﻿from flask import Blueprint, render_template_string, request, flash, redirect, url_for, Response
 from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
+from app.models.available_day import AvailableDay
 from flask_login import login_user
 import uuid
 import os
+import json
+from datetime import datetime
 
 admin = Blueprint('admin', __name__)
-
-# SEGURIDAD: Lee la clave de las variables de entorno. 
-# Si no existe (local), usa una clave de desarrollo.
 CLAVE_MAESTRA = os.environ.get('MASTER_KEY', 'dev-local-key-123')
 
+# --- LOGIN ADMIN ---
 @admin.route('/super-admin', methods=['GET', 'POST'])
 def login_admin():
     if request.method == 'POST':
-        clave_ingresada = request.form.get('clave')
-        # Comparamos de forma segura
-        if clave_ingresada == CLAVE_MAESTRA:
+        if request.form.get('clave') == CLAVE_MAESTRA:
             return redirect(url_for('admin.panel'))
         flash('Clave incorrecta', 'danger')
     return render_template_string("""
@@ -31,7 +30,7 @@ def login_admin():
     </form></div></body></html>
     """)
 
-# --- PANEL (SIN CAMBIOS LÓGICOS, SOLO LIMPIEZA ---
+# --- PANEL ---
 @admin.route('/super-admin/panel', methods=['GET', 'POST'])
 def panel():
     if request.method == 'POST':
@@ -52,12 +51,20 @@ def panel():
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
     <div class='max-w-6xl mx-auto'>
-        <h1 class='text-2xl font-bold mb-6'>Panel Super Admin</h1>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class='text-2xl font-bold'>Panel Super Admin</h1>
+            <div class="flex gap-2">
+                <a href="{{ url_for('admin.backup') }}" class="bg-green-600 text-white px-4 py-2 rounded font-bold text-sm">⬇️ Backup DB</a>
+                <a href="/" class="text-red-600 font-bold text-sm">Salir</a>
+            </div>
+        </div>
+        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for cat, msg in messages %}
             <div class="bg-{{ 'green' if cat=='success' else 'red' }}-100 text-{{ 'green' if cat=='success' else 'red' }}-700 p-3 rounded mb-4">{{ msg }}</div>
             {% endfor %}
         {% endwith %}
+
         <div class="bg-white p-4 rounded-xl shadow mb-6">
             <h2 class="font-bold mb-2">Agregar Nuevo</h2>
             <form method="POST" class="flex gap-2">
@@ -66,6 +73,7 @@ def panel():
                 <button class="bg-indigo-600 text-white px-4 py-2 rounded font-bold">Crear</button>
             </form>
         </div>
+
         <div class="bg-white rounded-xl shadow overflow-x-auto">
         <table class='w-full text-sm'>
         <thead class='bg-slate-800 text-white'><tr><th class='p-3 text-left'>Profesional</th><th class='p-3 text-left'>Email</th><th class='p-3 text-center'>Acciones</th></tr></thead>
@@ -86,6 +94,7 @@ def panel():
     </body></html>
     """, users=users)
 
+# --- DETALLES USUARIO ---
 @admin.route('/super-admin/user/<int:uid>')
 def view_user(uid):
     u = User.query.get_or_404(uid)
@@ -155,3 +164,46 @@ def reset_pwd(uid):
     db.session.commit()
     flash(f'Clave de {u.name} reseteada a: 1234', 'success')
     return redirect(url_for('admin.view_user', uid=uid))
+
+# --- BACKUP (DESCARGA JSON) ---
+@admin.route('/super-admin/backup')
+def backup():
+    data = {}
+    
+    # Respaldar Usuarios
+    users = User.query.all()
+    data['users'] = []
+    for u in users:
+        data['users'].append({
+            'id': u.id, 'name': u.name, 'email': u.email, 'slug': u.slug,
+            'price': u.appointment_price, 'mp_public_key': u.mp_public_key
+        })
+
+    # Respaldar Turnos
+    appointments = Appointment.query.all()
+    data['appointments'] = []
+    for a in appointments:
+        data['appointments'].append({
+            'id': a.id, 'pro_id': a.professional_id, 
+            'client': a.client_name, 'email': a.client_email, 'phone': a.client_phone,
+            'date': str(a.date), 'time': str(a.time), 'status': a.status
+        })
+
+    # Respaldar Disponibilidad
+    days = AvailableDay.query.all()
+    data['available_days'] = []
+    for d in days:
+        data['available_days'].append({
+            'id': d.id, 'pro_id': d.professional_id,
+            'date': str(d.date), 'start': str(d.start_time), 
+            'end': str(d.end_time), 'duration': d.slot_duration
+        })
+
+    payload = json.dumps(data, indent=4)
+    filename = f"backup_agendapro_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
+    
+    return Response(
+        payload,
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment;filename={filename}'}
+    )
