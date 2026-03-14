@@ -33,12 +33,12 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
+            # Migraciones manuales seguras
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS slot_duration INTEGER DEFAULT 30'))
-            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_access_token VARCHAR(200)'))
-            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_public_key VARCHAR(200)'))
-            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS appointment_price FLOAT DEFAULT 0'))
+            # --- MIGRACIÓN FALTANTE ---
+            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS custom_slots JSONB'))
             db.session.commit()
             print(">>> Sistema iniciado correctamente.")
         except Exception as e:
@@ -56,9 +56,3 @@ def create_app(config_class=Config):
     app.register_blueprint(admin, url_prefix='/admin')
 
     return app
-
-# Migración segura para custom_slots
-try:
-    db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS custom_slots JSONB'))
-    db.session.commit()
-except: pass
