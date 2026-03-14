@@ -83,7 +83,7 @@ def export_csv():
     out.seek(0)
     return Response(out, mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=agenda.csv'})
 
-# --- CONFIGURACIÓN DE PAGOS ---
+# --- CONFIGURACIÓN DE PAGOS (ESTABLE) ---
 @dashboard.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
@@ -112,12 +112,3 @@ def settings():
     <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a>
     </div></body></html>
     """)
-
-# --- RUTA DE PRUEBA (SIMPLIFICADA) ---
-@dashboard.route('/test-encryption')
-@login_required
-def test_encryption():
-    readable = current_user.mp_access_token
-    raw_value = current_user._mp_access_token
-    # Devolvemos texto plano para evitar errores de HTML
-    return "Token Leído: " + str(readable) + " | Token Encriptado (Raw): " + str(raw_value)
