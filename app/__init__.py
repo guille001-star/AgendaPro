@@ -33,12 +33,12 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
-            # MIGRACIONES
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
             db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS slot_duration INTEGER DEFAULT 30'))
-            # NUEVA COLUMNA
-            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS custom_slots JSONB'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_access_token VARCHAR(200)'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS mp_public_key VARCHAR(200)'))
+            db.session.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS appointment_price FLOAT DEFAULT 0'))
             db.session.commit()
             print(">>> Sistema iniciado correctamente.")
         except Exception as e:

@@ -8,9 +8,8 @@ class AvailableDay(db.Model):
     date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.Time, nullable=True)
     end_time = db.Column(db.Time, nullable=True)
+    # NUEVO: Duración del turno en minutos (por defecto 30)
     slot_duration = db.Column(db.Integer, default=30)
-    # NUEVO
-    custom_slots = db.Column(db.JSON, nullable=True)
-
+    
     def __repr__(self):
         return f'<AvailableDay {self.date}>'

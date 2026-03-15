@@ -120,28 +120,3 @@ def settings():
     <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a>
     </div></body></html>
     """)
-
-# --- GUARDAR TURNOS PERSONALIZADOS (AVANZADO) ---
-@dashboard.route('/save-custom-slots/<date_str>', methods=['POST'])
-@login_required
-def save_custom_slots(date_str):
-    day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
-    if not day:
-        # Si el día no existe, lo creamos primero (por seguridad)
-        day = AvailableDay(professional_id=current_user.id, date=date_str)
-        db.session.add(day)
-
-    data = request.get_json()
-    slots = data.get('slots', [])
-    
-    if not slots:
-        return jsonify({'status':'error', 'msg':'No hay datos'}), 400
-
-    # Guardar JSON y limpiar modo simple
-    day.custom_slots = slots
-    day.start_time = None
-    day.end_time = None
-    day.slot_duration = None
-    
-    db.session.commit()
-    return jsonify({'status':'success'})
