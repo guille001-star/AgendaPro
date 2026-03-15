@@ -85,12 +85,12 @@ def agenda(slug):
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
     
-    # IMPORTANTE: Pasar solo las fechas
+    # CORRECCIÓN CLAVE: Extraer SOLO las fechas
     enabled_dates = [d.date for d in enabled_days]
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (DUAL: SIMPLE + CUSTOM) ---
+# --- API HORARIOS (SEGURO) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -104,28 +104,20 @@ def get_slots(slug, date_str):
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # INTENTAR MODO AVANZADO (Si tiene custom_slots)
+    # INTENTAR MODO AVANZADO
     if day.custom_slots:
         try:
             slots = []
-            # Asegurar que sea lista
-            raw_slots = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
-            
-            for s in raw_slots:
-                # Solo mostrar los marcados como públicos
+            raw = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
+            for s in raw:
                 if s.get('public'):
                     t = datetime.strptime(s['start'], '%H:%M').time()
                     if t not in booked:
                         slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
-            
-            # Si encontró slots personalizados, retornarlos
-            if slots: 
-                return jsonify({'slots': slots})
-        except Exception as e:
-            print(f"Error leyendo custom slots: {e}")
-            # Si falla, que siga al modo simple
+            if slots: return jsonify({'slots': slots})
+        except: pass
 
-    # MODO SIMPLE (Default / Fallback)
+    # MODO SIMPLE
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
