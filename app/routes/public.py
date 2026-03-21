@@ -3,9 +3,9 @@ from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
+from app.models.time_block import TimeBlock
 from datetime import datetime, date, time as dt_time, timedelta
 import mercadopago
-import json
 
 public = Blueprint('public', __name__)
 
@@ -95,7 +95,7 @@ def agenda(slug):
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (COMPATIBLE) ---
+# --- API HORARIOS (USA TABLA NUEVA) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -109,22 +109,21 @@ def get_slots(slug, date_str):
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # MODO AVANZADO (Preparado para el futuro, devuelve objetos)
-    if day.custom_slots:
-        try:
-            raw = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
-            # Por ahora, para no romper la vista vieja, convertimos a strings simples
-            # Solo mostramos los públicos
-            slots = []
-            for s in raw:
-                if s.get('public'):
-                    t = datetime.strptime(s['start'], '%H:%M').time()
+    # MODO AVANZADO (USA TIMEBLOCK)
+    blocks = TimeBlock.query.filter_by(available_day_id=day.id).order_by(TimeBlock.start_time).all()
+    
+    if blocks:
+        slots = []
+        for b in blocks:
+            if b.is_public:
+                try:
+                    t = datetime.strptime(b.start_time, '%H:%M').time()
                     if t not in booked:
-                        slots.append(s['start']) # Enviamos STRING simple
-            if slots: return jsonify({'slots': slots})
-        except: pass
+                        slots.append(b.start_time) # String simple para la vista
+                except: pass
+        if slots: return jsonify({'slots': slots})
 
-    # MODO SIMPLE (Envía STRINGS simples para que la vista vieja funcione)
+    # MODO SIMPLE
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
@@ -134,7 +133,7 @@ def get_slots(slug, date_str):
     end_dt = datetime.combine(d, end)
     while curr < end_dt:
         if curr.time() not in booked: 
-            slots.append(curr.time().strftime('%H:%M')) # Enviamos STRING simple
+            slots.append(curr.time().strftime('%H:%M'))
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
