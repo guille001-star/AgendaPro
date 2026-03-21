@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models.appointment import Appointment
 from app.models.available_day import AvailableDay
+from app.models.time_block import TimeBlock # <--- IMPORTANTE
 from datetime import date, datetime, timedelta
 import calendar
 import csv
@@ -53,6 +54,8 @@ def set_hours(date_str):
         day.start_time = datetime.strptime(data['start_time'], '%H:%M').time()
         day.end_time = datetime.strptime(data['end_time'], '%H:%M').time()
         day.slot_duration = int(data.get('slot_duration', 30))
+        # Al guardar modo simple, borramos los bloques avanzados
+        TimeBlock.query.filter_by(available_day_id=day.id).delete()
         db.session.commit()
         return jsonify({'status':'success'})
     except: return jsonify({'status':'error'}), 400
@@ -61,8 +64,23 @@ def set_hours(date_str):
 @login_required
 def get_config(date_str):
     day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
-    if day: return jsonify({'start_time': day.start_time.strftime('%H:%M') if day.start_time else '09:00', 'end_time': day.end_time.strftime('%H:%M') if day.end_time else '18:00', 'slot_duration': day.slot_duration or 30})
-    return jsonify({'start_time':'09:00', 'end_time':'18:00', 'slot_duration':30})
+    # Default data
+    data = {'start_time':'09:00', 'end_time':'18:00', 'slot_duration':30, 'custom_slots': []}
+    
+    if day:
+        data['start_time'] = day.start_time.strftime('%H:%M') if day.start_time else '09:00'
+        data['end_time'] = day.end_time.strftime('%H:%M') if day.end_time else '18:00'
+        data['slot_duration'] = day.slot_duration or 30
+        
+        # Buscar bloques avanzados
+        blocks = TimeBlock.query.filter_by(available_day_id=day.id).order_by(TimeBlock.start_time).all()
+        if blocks:
+            # Formatear para el JS
+            data['custom_slots'] = [
+                {'start': b.start_time, 'dur': b.duration, 'public': b.is_public} for b in blocks
+            ]
+            
+    return jsonify(data)
 
 @dashboard.route('/live-data')
 @login_required
@@ -83,7 +101,7 @@ def export_csv():
     out.seek(0)
     return Response(out, mimetype='text/csv', headers={'Content-Disposition':'attachment;filename=agenda.csv'})
 
-# --- CONFIGURACIÓN DE PAGOS (CORREGIDO) ---
+# --- CONFIGURACIÓN DE PAGOS ---
 @dashboard.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
@@ -98,7 +116,6 @@ def settings():
         flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
 
-    # Mostramos el valor REAL desencriptado en el input
     return render_template_string("""
     <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
     <body class='bg-gray-100 p-8'>
@@ -106,17 +123,43 @@ def settings():
     <h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2>
     <form method='POST'>
     <div class='mb-4'><label>Precio ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or "" }}' class='w-full border p-2 rounded'></div>
-    
-    <!-- AQUÍ ESTABA EL ERROR: Agregado el value -->
-    <div class='mb-4'>
-        <label>Access Token</label>
-        <input type='text' name='token' value='{{ current_user.mp_access_token or "" }}' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'>
-        <p class='text-xs text-gray-400 mt-1'>Tu token se muestra desencriptado por seguridad.</p>
-    </div>
-    
+    <div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'></div>
     <div class='mb-4'><label>Public Key</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or "" }}' class='w-full border p-2 rounded text-xs font-mono'></div>
     <button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button>
     </form>
     <a href="{{ url_for('dashboard.index') }}" class="block text-center text-sm mt-4">Volver</a>
     </div></body></html>
     """)
+
+# --- GUARDAR BLOQUES PERSONALIZADOS (RUTA FALTANTE) ---
+@dashboard.route('/save-custom-slots/<date_str>', methods=['POST'])
+@login_required
+def save_custom_slots(date_str):
+    day = AvailableDay.query.filter_by(professional_id=current_user.id, date=date_str).first()
+    if not day:
+        day = AvailableDay(professional_id=current_user.id, date=date_str)
+        db.session.add(day)
+
+    data = request.get_json()
+    slots = data.get('slots', [])
+
+    # 1. Borrar bloques viejos
+    TimeBlock.query.filter_by(available_day_id=day.id).delete()
+
+    # 2. Crear los nuevos
+    for s in slots:
+        block = TimeBlock(
+            available_day_id=day.id,
+            start_time=s.get('start'),
+            duration=s.get('dur'),
+            is_public=s.get('public', True)
+        )
+        db.session.add(block)
+
+    # 3. Limpiar modo simple
+    day.start_time = None
+    day.end_time = None
+    day.slot_duration = None
+
+    db.session.commit()
+    return jsonify({'status':'success'})
