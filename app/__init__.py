@@ -29,17 +29,14 @@ def create_app(config_class=Config):
     from app.models.user import User
     from app.models.appointment import Appointment
     from app.models.available_day import AvailableDay
+    from app.models.time_block import TimeBlock  # IMPORTAR NUEVO MODELO
 
     with app.app_context():
         try:
+            # Esto creará la tabla time_block automáticamente si no existe
             db.create_all()
-            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS start_time TIME'))
-            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS end_time TIME'))
-            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS slot_duration INTEGER DEFAULT 30'))
-            # VERIFICACIÓN DE COLUMNA NUEVA
-            db.session.execute(text('ALTER TABLE available_day ADD COLUMN IF NOT EXISTS custom_slots JSONB'))
             db.session.commit()
-            print(">>> Sistema iniciado correctamente.")
+            print(">>> Sistema iniciado correctamente. Tabla TimeBlock lista.")
         except Exception as e:
             db.session.rollback()
             print(f">>> Nota DB: {e}")

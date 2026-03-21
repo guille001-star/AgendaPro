@@ -9,8 +9,6 @@ class AvailableDay(db.Model):
     start_time = db.Column(db.Time, nullable=True)
     end_time = db.Column(db.Time, nullable=True)
     slot_duration = db.Column(db.Integer, default=30)
-    # NUEVO: Campo para guardar los bloques variables
-    custom_slots = db.Column(db.JSON, nullable=True)
 
     def __repr__(self):
         return f'<AvailableDay {self.date}>'
