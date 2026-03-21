@@ -84,13 +84,11 @@ def agenda(slug):
 
     today = date.today()
     enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
-    
-    # IMPORTANTE: Seguimos enviando SOLO fechas para no romper la vista
     enabled_dates = [d.date for d in enabled_days]
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (LOGICA MEJORADA) ---
+# --- API HORARIOS (LÓGICA CORREGIDA) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -101,32 +99,26 @@ def get_slots(slug, date_str):
     day = AvailableDay.query.filter_by(professional_id=professional.id, date=d).first()
     if not day: return jsonify({'message': 'No habilitado.'})
 
-    # Buscar reservados
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # INTENTAR MODO AVANZADO (Si existe custom_slots)
+    # MODO AVANZADO (PRIORIDAD)
     if day.custom_slots:
+        slots = []
         try:
-            slots = []
-            # Convertir a lista si viene en string
-            raw_slots = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
-            
-            for s in raw_slots:
-                # Solo mostrar si es público
+            raw = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
+            for s in raw:
                 if s.get('public'):
                     t = datetime.strptime(s['start'], '%H:%M').time()
                     if t not in booked:
                         slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
-            
-            # Si encontró bloques, retornarlos
-            if slots: 
-                return jsonify({'slots': slots})
+            # Retornamos SOLO los custom slots (aunque estén vacíos)
+            return jsonify({'slots': slots})
         except Exception as e:
-            print(f"Error leyendo custom slots: {e}")
-            # Si falla, seguimos con el modo simple abajo
+            print(f"Error CRITICO en custom_slots: {e}")
+            return jsonify({'slots': []}) # Si falla, no mostrar nada para evitar confusión
 
-    # MODO SIMPLE (Default / Fallback)
+    # MODO SIMPLE
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
