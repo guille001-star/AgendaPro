@@ -95,46 +95,45 @@ def agenda(slug):
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (USA TABLA NUEVA) ---
+# --- API HORARIOS (A PRUEBA DE FALLOS) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
-    if not professional: return jsonify({'error': 'No'}), 404
+    if not professional: return jsonify({'slots': []}), 404
     try: d = datetime.strptime(date_str, '%Y-%m-%d').date()
-    except: return jsonify({'error': 'Fecha'}), 400
+    except: return jsonify({'slots': []}), 400
     
     day = AvailableDay.query.filter_by(professional_id=professional.id, date=d).first()
-    if not day: return jsonify({'message': 'No habilitado.'})
+    if not day: return jsonify({'slots': []}) # Devolver vacío si no está habilitado
 
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # MODO AVANZADO (USA TIMEBLOCK)
+    # INTENTO LEER BLOQUES AVANZADOS
     blocks = TimeBlock.query.filter_by(available_day_id=day.id).order_by(TimeBlock.start_time).all()
     
+    slots = []
     if blocks:
-        slots = []
         for b in blocks:
             if b.is_public:
                 try:
                     t = datetime.strptime(b.start_time, '%H:%M').time()
                     if t not in booked:
-                        slots.append(b.start_time) # String simple para la vista
+                        slots.append(b.start_time)
                 except: pass
-        if slots: return jsonify({'slots': slots})
+    else:
+        # MODO SIMPLE CON DEFAULTS SEGUROS (09:00 - 18:00)
+        start = day.start_time or dt_time(9,0)
+        end = day.end_time or dt_time(18,0)
+        dur = day.slot_duration or 30
+        
+        curr = datetime.combine(d, start)
+        end_dt = datetime.combine(d, end)
+        while curr < end_dt:
+            if curr.time() not in booked: 
+                slots.append(curr.time().strftime('%H:%M'))
+            curr += timedelta(minutes=dur)
 
-    # MODO SIMPLE
-    start = day.start_time or dt_time(9,0)
-    end = day.end_time or dt_time(18,0)
-    dur = day.slot_duration or 30
-    
-    slots = []
-    curr = datetime.combine(d, start)
-    end_dt = datetime.combine(d, end)
-    while curr < end_dt:
-        if curr.time() not in booked: 
-            slots.append(curr.time().strftime('%H:%M'))
-        curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
 # --- RETORNO MP ---
@@ -149,21 +148,7 @@ def pago_exito():
                 db.session.commit()
                 prof = User.query.get(apt.professional_id)
                 msg = f"Hola! Confirmé mi turno con {prof.name} para el {apt.date.strftime('%d/%m')} a las {apt.time.strftime('%H:%M')}."
-                return render_template_string("""
-                <html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head>
-                <body class='bg-green-50 min-h-screen flex items-center justify-center p-4'>
-                <div class='bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center'>
-                    <div class="text-green-500 text-6xl mb-4">✓</div>
-                    <h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Pago Confirmado!</h1>
-                    <div class="bg-gray-100 p-4 rounded-lg text-left mb-6">
-                        <p class="text-sm"><b>Fecha:</b> {{ apt.date.strftime('%d/%m/%Y') }}</p>
-                        <p class="text-sm"><b>Hora:</b> {{ apt.time.strftime('%H:%M') }}</p>
-                    </div>
-                    <a href="https://wa.me/?text={{ msg }}" target="_blank" class="block w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hover:bg-green-600">📲 Enviar a WhatsApp</a>
-                    <a href="{{ url_for('public.agenda', slug=prof.slug) }}" class="block text-indigo-600 font-bold text-sm">Volver</a>
-                </div>
-                </body></html>
-                """, apt=apt, prof=prof, msg=msg)
+                return render_template_string("<html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-green-50 min-h-screen flex items-center justify-center p-4'><div class='bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center'><div class='text-green-500 text-6xl mb-4'>✓</div><h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Pago Confirmado!</h1><div class='bg-gray-100 p-4 rounded-lg text-left mb-6'><p class='text-sm'><b>Fecha:</b> {{ apt.date.strftime('%d/%m/%Y') }}</p><p class='text-sm'><b>Hora:</b> {{ apt.time.strftime('%H:%M') }}</p></div><a href='https://wa.me/?text={{ msg }}' target='_blank' class='block w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hover:bg-green-600'>📲 Enviar a WhatsApp</a><a href='{{ url_for('public.agenda', slug=prof.slug) }}' class='block text-indigo-600 font-bold text-sm'>Volver</a></div></body></html>", apt=apt, prof=prof, msg=msg)
         except: pass
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
