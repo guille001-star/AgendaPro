@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, render_template_string, request, redirect, url_for, flash, jsonify
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, render_template_string
 from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
@@ -82,11 +82,10 @@ def agenda(slug):
         flash('¡Turno reservado!', 'success')
         return redirect(url_for('public.agenda', slug=slug))
 
-    # CORRECCIÓN: Ajustar hora a Argentina (UTC-3)
-    # Si son las 21:00 en AR, el server ve 00:00 (mañana). Restamos 3hs para compensar.
-    today_server = datetime.utcnow()
-    today_argentina = (today_server - timedelta(hours=3)).date()
-    
+    # ZONA HORARIA ARGENTINA
+    today_utc = datetime.utcnow()
+    today_argentina = (today_utc - timedelta(hours=3)).date()
+
     enabled_days = AvailableDay.query.filter(
         AvailableDay.professional_id == professional.id, 
         AvailableDay.date >= today_argentina
@@ -96,7 +95,7 @@ def agenda(slug):
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS ---
+# --- API HORARIOS (COMPATIBLE) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -110,20 +109,22 @@ def get_slots(slug, date_str):
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # MODO AVANZADO
+    # MODO AVANZADO (Preparado para el futuro, devuelve objetos)
     if day.custom_slots:
-        slots = []
         try:
             raw = day.custom_slots if isinstance(day.custom_slots, list) else json.loads(day.custom_slots)
+            # Por ahora, para no romper la vista vieja, convertimos a strings simples
+            # Solo mostramos los públicos
+            slots = []
             for s in raw:
                 if s.get('public'):
                     t = datetime.strptime(s['start'], '%H:%M').time()
                     if t not in booked:
-                        slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
-            return jsonify({'slots': slots})
+                        slots.append(s['start']) # Enviamos STRING simple
+            if slots: return jsonify({'slots': slots})
         except: pass
 
-    # MODO SIMPLE
+    # MODO SIMPLE (Envía STRINGS simples para que la vista vieja funcione)
     start = day.start_time or dt_time(9,0)
     end = day.end_time or dt_time(18,0)
     dur = day.slot_duration or 30
@@ -133,7 +134,7 @@ def get_slots(slug, date_str):
     end_dt = datetime.combine(d, end)
     while curr < end_dt:
         if curr.time() not in booked: 
-            slots.append({'time': curr.time().strftime('%H:%M'), 'dur': dur, 'type': 'simple'})
+            slots.append(curr.time().strftime('%H:%M')) # Enviamos STRING simple
         curr += timedelta(minutes=dur)
     return jsonify({'slots': slots})
 
