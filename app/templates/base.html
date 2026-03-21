@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgendaPro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
+<style>
+    /* FIX GLOBAL: Texto negro por defecto, blanco solo en fondos oscuros */
+    body { color: #1e293b !important; background-color: #f8fafc !important; }
+    .bg-slate-800, .bg-slate-900, header, footer { color: white !important; background-color: #0f172a !important; }
+    /* Asegura que los inputs se vean */
+    input, select, textarea { color: #1e293b !important; background-color: white !important; border: 1px solid #cbd5e1 !important; }
+</style></head>
 <body class="bg-gray-100 min-h-screen">
     
     <!-- MENSAJE DE ÉXITO GRANDE Y FIJO -->
@@ -40,3 +46,4 @@
     </div>
 </body>
 </html>
+
