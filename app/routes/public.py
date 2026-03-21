@@ -82,13 +82,21 @@ def agenda(slug):
         flash('¡Turno reservado!', 'success')
         return redirect(url_for('public.agenda', slug=slug))
 
-    today = date.today()
-    enabled_days = AvailableDay.query.filter(AvailableDay.professional_id == professional.id, AvailableDay.date >= today).order_by(AvailableDay.date).all()
+    # CORRECCIÓN: Ajustar hora a Argentina (UTC-3)
+    # Si son las 21:00 en AR, el server ve 00:00 (mañana). Restamos 3hs para compensar.
+    today_server = datetime.utcnow()
+    today_argentina = (today_server - timedelta(hours=3)).date()
+    
+    enabled_days = AvailableDay.query.filter(
+        AvailableDay.professional_id == professional.id, 
+        AvailableDay.date >= today_argentina
+    ).order_by(AvailableDay.date).all()
+    
     enabled_dates = [d.date for d in enabled_days]
     
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (LÓGICA CORREGIDA) ---
+# --- API HORARIOS ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -102,7 +110,7 @@ def get_slots(slug, date_str):
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
 
-    # MODO AVANZADO (PRIORIDAD)
+    # MODO AVANZADO
     if day.custom_slots:
         slots = []
         try:
@@ -112,11 +120,8 @@ def get_slots(slug, date_str):
                     t = datetime.strptime(s['start'], '%H:%M').time()
                     if t not in booked:
                         slots.append({'time': s['start'], 'dur': s['dur'], 'type': 'custom'})
-            # Retornamos SOLO los custom slots (aunque estén vacíos)
             return jsonify({'slots': slots})
-        except Exception as e:
-            print(f"Error CRITICO en custom_slots: {e}")
-            return jsonify({'slots': []}) # Si falla, no mostrar nada para evitar confusión
+        except: pass
 
     # MODO SIMPLE
     start = day.start_time or dt_time(9,0)
