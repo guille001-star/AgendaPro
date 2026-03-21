@@ -73,7 +73,6 @@ def get_config(date_str):
             data['custom_slots'] = [{'start': b.start_time, 'dur': b.duration, 'public': b.is_public} for b in blocks]
     return jsonify(data)
 
-# --- RUTA FALTANTE ---
 @dashboard.route('/save-custom-slots/<date_str>', methods=['POST'])
 @login_required
 def save_custom_slots(date_str):

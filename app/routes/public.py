@@ -21,7 +21,6 @@ def lista():
 def agenda(slug):
     professional = User.query.filter_by(slug=slug).first_or_404()
     if request.method == 'POST':
-        # Logica de reserva
         date_str = request.form['date']
         time_str = request.form['time_slot']
         client_name = request.form['name']
@@ -63,7 +62,6 @@ def agenda(slug):
     enabled_dates = [d.date for d in enabled_days]
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (LEE BLOQUES) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()

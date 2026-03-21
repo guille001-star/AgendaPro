@@ -7,7 +7,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 db = SQLAlchemy()
 login_manager = LoginManager()
 mail = Mail()
-
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -27,7 +26,7 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
-            print(">>> Sistema OK. Tabla TimeBlock creada.")
+            print(">>> Sistema OK.")
         except Exception as e:
             print(f">>> Error DB: {e}")
     from app.routes.auth import auth
