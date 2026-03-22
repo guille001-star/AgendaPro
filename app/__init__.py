@@ -26,7 +26,7 @@ def create_app(config_class=Config):
     with app.app_context():
         try:
             db.create_all()
-            print(">>> Sistema OK.")
+            print(">>> Sistema OK. Tabla TimeBlock creada.")
         except Exception as e:
             print(f">>> Error DB: {e}")
     from app.routes.auth import auth

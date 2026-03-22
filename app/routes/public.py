@@ -62,6 +62,7 @@ def agenda(slug):
     enabled_dates = [d.date for d in enabled_days]
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
+# --- API HORARIOS (CORREGIDO) ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -75,6 +76,7 @@ def get_slots(slug, date_str):
     booked = [a.time for a in apps]
     slots = []
     
+    # BUSCAR BLOQUES AVANZADOS
     blocks = TimeBlock.query.filter_by(available_day_id=day.id).order_by(TimeBlock.start_time).all()
     if blocks:
         for b in blocks:
@@ -84,6 +86,7 @@ def get_slots(slug, date_str):
                     if t not in booked: slots.append(b.start_time)
                 except: pass
     else:
+        # MODO SIMPLE
         start = day.start_time or dt_time(9,0)
         end = day.end_time or dt_time(18,0)
         dur = day.slot_duration or 30

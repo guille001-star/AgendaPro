@@ -59,6 +59,7 @@ def set_hours(date_str):
         return jsonify({'status':'success'})
     except: return jsonify({'status':'error'}), 400
 
+# --- RUTA CORREGIDA: GET-CONFIG (LEE BLOQUES) ---
 @dashboard.route('/get-day-config/<date_str>')
 @login_required
 def get_config(date_str):
@@ -73,6 +74,7 @@ def get_config(date_str):
             data['custom_slots'] = [{'start': b.start_time, 'dur': b.duration, 'public': b.is_public} for b in blocks]
     return jsonify(data)
 
+# --- RUTA FALTANTE: GUARDAR BLOQUES ---
 @dashboard.route('/save-custom-slots/<date_str>', methods=['POST'])
 @login_required
 def save_custom_slots(date_str):
