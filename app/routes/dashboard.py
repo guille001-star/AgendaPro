@@ -100,7 +100,12 @@ def live_data():
     t = get_local_date()
     todays = Appointment.query.filter_by(professional_id=current_user.id, date=t, status='reservado').order_by(Appointment.time).all()
     up = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status=='reservado', Appointment.date > t).order_by(Appointment.date, Appointment.time).limit(4).all()
-    return jsonify({'todays':[{'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in todays], 'upcoming':[{'date':a.date.strftime('%d/%m'), 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in up]})
+    # AGREGADO ID A LA RESPUESTA
+    return jsonify({
+        'todays':[{'id':a.id, 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in todays], 
+        'upcoming':[{'id':a.id, 'date':a.date.strftime('%d/%m'), 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in up]
+    })
+for a in todays], 'upcoming':[{'date':a.date.strftime('%d/%m'), 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in up]})
 
 @dashboard.route('/export-csv')
 @login_required
@@ -127,3 +132,18 @@ def settings():
         flash('Configuracion guardada.', 'success')
         return redirect(url_for('dashboard.settings'))
     return render_template_string("<html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-gray-100 p-8'><div class='max-w-xl mx-auto bg-white p-6 rounded-xl shadow'><h2 class='text-xl font-bold mb-4'>Configuracion de Cobros</h2><form method='POST'><div class='mb-4'><label>Precio ($)</label><input type='number' step='0.01' name='price' value='{{ current_user.appointment_price or \"\" }}' class='w-full border p-2 rounded'></div><div class='mb-4'><label>Access Token</label><input type='text' name='token' placeholder='TEST-...' class='w-full border p-2 rounded text-xs font-mono'></div><div class='mb-4'><label>Public Key</label><input type='text' name='public_key' value='{{ current_user.mp_public_key or \"\" }}' class='w-full border p-2 rounded text-xs font-mono'></div><button class='w-full bg-indigo-600 text-white py-2 rounded font-bold'>Guardar</button></form><a href=\"{{ url_for('dashboard.index') }}\" class=\"block text-center text-sm mt-4\">Volver</a></div></body></html>")
+
+# --- BORRAR TURNO ---
+@dashboard.route('/delete-appointment/<int:id>', methods=['POST'])
+@login_required
+def delete_appointment(id):
+    apt = Appointment.query.get_or_404(id)
+    # Seguridad: Solo el dueño puede borrarlo
+    if apt.professional_id != current_user.id:
+        return jsonify({'status': 'error', 'msg': 'No autorizado'}), 403
+    
+    # Si estaba pendiente de pago, no borrar, solo marcar como cancelado? O borrar directo.
+    # Vamos a borrarlo directo para liberar la memoria.
+    db.session.delete(apt)
+    db.session.commit()
+    return jsonify({'status': 'success'})
