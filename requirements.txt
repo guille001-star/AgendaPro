@@ -7,4 +7,5 @@ gunicorn
 requests
 mercadopago
 cryptography
+flask-migrate
 python-dotenv
