@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, render_template_string
+﻿from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app import db
 from app.models.user import User
 from app.models.appointment import Appointment
@@ -40,6 +40,7 @@ def agenda(slug):
         status = 'pendiente' if requiere_pago else 'reservado'
         new_apt = Appointment(professional_id=professional.id, date=apt_date, time=apt_time, client_name=client_name, client_email=client_email, client_phone=client_phone, status=status)
         db.session.add(new_apt); db.session.commit()
+        
         if requiere_pago:
             try:
                 sdk = mercadopago.SDK(professional.mp_access_token)
@@ -53,8 +54,9 @@ def agenda(slug):
             except Exception as e:
                 flash(f'Error: {str(e)}', 'danger')
                 db.session.delete(new_apt); db.session.commit()
-        flash('¡Turno reservado!', 'success')
-        return redirect(url_for('public.agenda', slug=slug))
+        
+        # CAMBIO: Mostramos confirmacion directa
+        return render_template('public/confirmacion.html', professional=professional, date=apt_date, time=apt_time, client_name=client_name)
 
     today_utc = datetime.utcnow()
     today_argentina = (today_utc - timedelta(hours=3)).date()
@@ -62,7 +64,7 @@ def agenda(slug):
     enabled_dates = [d.date for d in enabled_days]
     return render_template('public/agenda.html', professional=professional, enabled_dates=enabled_dates)
 
-# --- API HORARIOS (CORREGIDO) ---
+# --- API HORARIOS ---
 @public.route('/agenda/get-slots/<slug>/<date_str>')
 def get_slots(slug, date_str):
     professional = User.query.filter_by(slug=slug).first()
@@ -71,12 +73,11 @@ def get_slots(slug, date_str):
     except: return jsonify({'slots': []}), 400
     day = AvailableDay.query.filter_by(professional_id=professional.id, date=d).first()
     if not day: return jsonify({'slots': []})
-    
+
     apps = Appointment.query.filter_by(professional_id=professional.id, date=d).filter(Appointment.status.in_(['reservado', 'pendiente'])).all()
     booked = [a.time for a in apps]
     slots = []
-    
-    # BUSCAR BLOQUES AVANZADOS
+
     blocks = TimeBlock.query.filter_by(available_day_id=day.id).order_by(TimeBlock.start_time).all()
     if blocks:
         for b in blocks:
@@ -86,7 +87,6 @@ def get_slots(slug, date_str):
                     if t not in booked: slots.append(b.start_time)
                 except: pass
     else:
-        # MODO SIMPLE
         start = day.start_time or dt_time(9,0)
         end = day.end_time or dt_time(18,0)
         dur = day.slot_duration or 30
@@ -106,8 +106,8 @@ def pago_exito():
             if apt and apt.status == 'pendiente':
                 apt.status = 'reservado'; db.session.commit()
                 prof = User.query.get(apt.professional_id)
-                msg = f"Hola! Confirmé mi turno con {prof.name} para el {apt.date.strftime('%d/%m')} a las {apt.time.strftime('%H:%M')}."
-                return render_template_string("<html><head><meta charset='UTF-8'><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-green-50 min-h-screen flex items-center justify-center p-4'><div class='bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center'><div class='text-green-500 text-6xl mb-4'>✓</div><h1 class='text-2xl font-bold text-gray-800 mb-2'>¡Confirmado!</h1><a href='https://wa.me/?text={{ msg }}' target='_blank' class='block w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg text-lg mb-4 hover:bg-green-600'>📲 WhatsApp</a><a href='{{ url_for('public.agenda', slug=prof.slug) }}' class='block text-indigo-600 font-bold text-sm'>Volver</a></div></body></html>", apt=apt, prof=prof, msg=msg)
+                # CAMBIO: Usamos plantilla unificada
+                return render_template('public/confirmacion.html', professional=prof, date=apt.date, time=apt.time, client_name=apt.client_name)
         except: pass
     flash('Pago recibido.', 'success')
     return redirect(url_for('public.home'))
