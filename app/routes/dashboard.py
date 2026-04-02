@@ -59,7 +59,6 @@ def set_hours(date_str):
         return jsonify({'status':'success'})
     except: return jsonify({'status':'error'}), 400
 
-# --- RUTA CORREGIDA: GET-CONFIG (LEE BLOQUES) ---
 @dashboard.route('/get-day-config/<date_str>')
 @login_required
 def get_config(date_str):
@@ -74,7 +73,6 @@ def get_config(date_str):
             data['custom_slots'] = [{'start': b.start_time, 'dur': b.duration, 'public': b.is_public} for b in blocks]
     return jsonify(data)
 
-# --- RUTA FALTANTE: GUARDAR BLOQUES ---
 @dashboard.route('/save-custom-slots/<date_str>', methods=['POST'])
 @login_required
 def save_custom_slots(date_str):
@@ -100,12 +98,10 @@ def live_data():
     t = get_local_date()
     todays = Appointment.query.filter_by(professional_id=current_user.id, date=t, status='reservado').order_by(Appointment.time).all()
     up = Appointment.query.filter(Appointment.professional_id==current_user.id, Appointment.status=='reservado', Appointment.date > t).order_by(Appointment.date, Appointment.time).limit(4).all()
-    # AGREGADO ID A LA RESPUESTA
     return jsonify({
         'todays':[{'id':a.id, 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in todays], 
         'upcoming':[{'id':a.id, 'date':a.date.strftime('%d/%m'), 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in up]
     })
-for a in todays], 'upcoming':[{'date':a.date.strftime('%d/%m'), 'time':a.time.strftime('%H:%M'), 'name':a.client_name} for a in up]})
 
 @dashboard.route('/export-csv')
 @login_required
@@ -138,12 +134,8 @@ def settings():
 @login_required
 def delete_appointment(id):
     apt = Appointment.query.get_or_404(id)
-    # Seguridad: Solo el dueño puede borrarlo
     if apt.professional_id != current_user.id:
         return jsonify({'status': 'error', 'msg': 'No autorizado'}), 403
-    
-    # Si estaba pendiente de pago, no borrar, solo marcar como cancelado? O borrar directo.
-    # Vamos a borrarlo directo para liberar la memoria.
     db.session.delete(apt)
     db.session.commit()
     return jsonify({'status': 'success'})
